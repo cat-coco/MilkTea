@@ -1,0 +1,14 @@
+/Users/liusuihui/vscode/agent/demo/src/main/java/com/milktea/agent/MilkTeaAgentApplication.java
+/Users/liusuihui/vscode/agent/demo/src/main/java/com/milktea/agent/config/AgentConfig.java
+/Users/liusuihui/vscode/agent/demo/src/main/java/com/milktea/agent/context/ConversationContextManager.java
+/Users/liusuihui/vscode/agent/demo/src/main/java/com/milktea/agent/controller/AdminController.java
+/Users/liusuihui/vscode/agent/demo/src/main/java/com/milktea/agent/controller/ChatController.java
+/Users/liusuihui/vscode/agent/demo/src/main/java/com/milktea/agent/model/Order.java
+/Users/liusuihui/vscode/agent/demo/src/main/java/com/milktea/agent/model/OrderItem.java
+/Users/liusuihui/vscode/agent/demo/src/main/java/com/milktea/agent/model/OrderStatus.java
+/Users/liusuihui/vscode/agent/demo/src/main/java/com/milktea/agent/prompt/PromptManager.java
+/Users/liusuihui/vscode/agent/demo/src/main/java/com/milktea/agent/rag/RagManager.java
+/Users/liusuihui/vscode/agent/demo/src/main/java/com/milktea/agent/repository/OrderRepository.java
+/Users/liusuihui/vscode/agent/demo/src/main/java/com/milktea/agent/service/OrderService.java
+/Users/liusuihui/vscode/agent/demo/src/main/java/com/milktea/agent/skill/OrderSkills.java
+/Users/liusuihui/vscode/agent/demo/src/main/java/com/milktea/agent/skill/SkillRegistry.java

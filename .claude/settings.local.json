@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 -c \":*)",
+      "Bash(chmod +x /Users/liusuihui/vscode/agent/demo/package-extension.sh)",
+      "Bash(bash package-extension.sh)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" --connect-timeout 5 https://dashscope.aliyuncs.com)",
+      "Bash(scutil --proxy)"
+    ]
+  }
+}

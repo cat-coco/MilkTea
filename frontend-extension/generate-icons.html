@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head><title>Generate Icons</title></head>
+<body>
+<p>Open console and right-click to save each canvas as PNG</p>
+<canvas id="c16" width="16" height="16"></canvas>
+<canvas id="c48" width="48" height="48"></canvas>
+<canvas id="c128" width="128" height="128"></canvas>
+<script>
+function drawIcon(canvasId, size) {
+    const c = document.getElementById(canvasId);
+    const ctx = c.getContext('2d');
+    // Background circle
+    ctx.beginPath();
+    ctx.arc(size/2, size/2, size/2, 0, Math.PI * 2);
+    ctx.fillStyle = '#8B5E3C';
+    ctx.fill();
+    // Cup body
+    const cx = size/2, cy = size * 0.55;
+    const w = size * 0.4, h = size * 0.35;
+    ctx.fillStyle = 'white';
+    ctx.beginPath();
+    ctx.moveTo(cx - w/2, cy - h/2);
+    ctx.lineTo(cx + w/2, cy - h/2);
+    ctx.lineTo(cx + w/2 - w*0.08, cy + h/2);
+    ctx.lineTo(cx - w/2 + w*0.08, cy + h/2);
+    ctx.closePath();
+    ctx.fill();
+    // Straw
+    ctx.strokeStyle = '#E8985E';
+    ctx.lineWidth = size * 0.04;
+    ctx.beginPath();
+    ctx.moveTo(cx + w*0.1, cy - h/2);
+    ctx.lineTo(cx + w*0.2, cy - h * 0.9);
+    ctx.stroke();
+    // Bubble dots
+    ctx.fillStyle = '#5C3D2E';
+    const dotR = size * 0.03;
+    [[cx-w*0.1, cy+h*0.15], [cx+w*0.05, cy+h*0.2], [cx-w*0.05, cy+h*0.3]].forEach(([x,y]) => {
+        ctx.beginPath(); ctx.arc(x, y, dotR, 0, Math.PI*2); ctx.fill();
+    });
+    // Download link
+    const link = document.createElement('a');
+    link.download = `icon${size}.png`;
+    link.href = c.toDataURL();
+    link.textContent = `Download icon${size}.png`;
+    document.body.appendChild(link);
+    document.body.appendChild(document.createElement('br'));
+}
+drawIcon('c16', 16);
+drawIcon('c48', 48);
+drawIcon('c128', 128);
+</script>
+</body>
+</html>

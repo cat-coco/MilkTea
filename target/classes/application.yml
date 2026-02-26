@@ -1,0 +1,16 @@
+server:
+  port: 9000
+
+spring:
+  ai:
+    dashscope:
+      api-key: sk-b6b9255c4fdc410b910aeda3f0df0312
+      chat:
+        options:
+          model: qwen-plus
+          temperature: 0.7
+
+  # Static resources
+  web:
+    resources:
+      static-locations: classpath:/static/

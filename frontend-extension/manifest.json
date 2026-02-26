@@ -1,0 +1,33 @@
+{
+  "manifest_version": 3,
+  "name": "茶悦时光 - AI奶茶客服助手",
+  "version": "1.0.0",
+  "description": "茶悦时光智能奶茶订单客服Copilot，支持点单、查询、退单等功能",
+  "permissions": [],
+  "host_permissions": [
+    "http://localhost:9000/*"
+  ],
+  "action": {
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    },
+    "default_title": "茶悦时光客服"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["js/content.js"],
+      "css": ["css/copilot.css"]
+    }
+  ],
+  "background": {
+    "service_worker": "js/background.js"
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}
