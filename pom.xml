@@ -56,6 +56,14 @@
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
         </dependency>
+
+        <!-- Apache HttpClient 5: replaces JDK HttpClient to fix stale keep-alive connection issue
+             ("HTTP/1.1 header parser received no bytes"). Spring Boot auto-configures RestClient
+             to use Apache HC5 when it is on the classpath. -->
+        <dependency>
+            <groupId>org.apache.httpcomponents.client5</groupId>
+            <artifactId>httpclient5</artifactId>
+        </dependency>
     </dependencies>
 
     <repositories>
@@ -80,6 +88,8 @@
                         -Dhttps.proxyPort=17890
                         -Dhttp.proxyHost=127.0.0.1
                         -Dhttp.proxyPort=17890
+                        -Dhttp.nonProxyHosts="localhost|127.*|10.*|192.168.*"
+                        -Dhttps.nonProxyHosts="localhost|127.*|10.*|192.168.*"
                     </jvmArguments>
                     <excludes>
                         <exclude>
