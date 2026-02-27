@@ -5,7 +5,8 @@ spring:
   ai:
     openai:
       # 自部署大模型的 API 地址（兼容 OpenAI 格式，如 Ollama / vLLM / LMDeploy 等）
-      base-url: http://localhost:11434
+      # Spring AI 会自动在此地址后追加 /v1/chat/completions
+      base-url: http://10.155.193.243/api
       # 若自部署服务不需要鉴权，填任意非空字符串即可
       api-key: none
       chat:
