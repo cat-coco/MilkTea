@@ -19,7 +19,6 @@
 
     <properties>
         <java.version>17</java.version>
-        <spring-ai-alibaba.version>1.0.0-M5.1</spring-ai-alibaba.version>
         <spring-ai.version>1.0.0-M5</spring-ai.version>
     </properties>
 
@@ -30,17 +29,10 @@
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
 
-        <!-- Spring AI Alibaba DashScope -->
-        <dependency>
-            <groupId>com.alibaba.cloud.ai</groupId>
-            <artifactId>spring-ai-alibaba-starter</artifactId>
-            <version>${spring-ai-alibaba.version}</version>
-        </dependency>
-
-        <!-- Spring AI Core -->
+        <!-- Spring AI OpenAI（兼容自部署 OpenAI API 格式的大模型） -->
         <dependency>
             <groupId>org.springframework.ai</groupId>
-            <artifactId>spring-ai-core</artifactId>
+            <artifactId>spring-ai-openai-spring-boot-starter</artifactId>
             <version>${spring-ai.version}</version>
         </dependency>
 
@@ -75,12 +67,6 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
-                    <jvmArguments>
-                        -Dhttps.proxyHost=127.0.0.1
-                        -Dhttps.proxyPort=17890
-                        -Dhttp.proxyHost=127.0.0.1
-                        -Dhttp.proxyPort=17890
-                    </jvmArguments>
                     <excludes>
                         <exclude>
                             <groupId>org.projectlombok</groupId>

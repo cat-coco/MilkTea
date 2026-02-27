@@ -3,11 +3,15 @@ server:
 
 spring:
   ai:
-    dashscope:
-      api-key: sk-b6b9255c4fdc410b910aeda3f0df0312
+    openai:
+      # 自部署大模型的 API 地址（兼容 OpenAI 格式，如 Ollama / vLLM / LMDeploy 等）
+      base-url: http://localhost:11434
+      # 若自部署服务不需要鉴权，填任意非空字符串即可
+      api-key: none
       chat:
         options:
-          model: qwen-plus
+          # 替换为自部署服务对应的模型名称
+          model: qwen2.5:7b
           temperature: 0.7
 
   # Static resources
