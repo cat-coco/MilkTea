@@ -15,6 +15,14 @@ spring:
           model: qwen2.5:7b
           temperature: 0.7
 
+  # Redis (long-term memory persistence)
+  # If Redis is unavailable, the system falls back to in-memory storage
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      timeout: 3000ms
+
   # Static resources
   web:
     resources:

@@ -1,32 +1,45 @@
 package com.milktea.agent.controller;
 
-import com.milktea.agent.context.ConversationContextManager;
+import com.milktea.agent.context.ContextManager;
+import com.milktea.agent.memory.MemoryEntry;
+import com.milktea.agent.memory.MemoryManager;
 import com.milktea.agent.prompt.PromptManager;
 import com.milktea.agent.rag.RagManager;
-import com.milktea.agent.skill.SkillRegistry;
+import com.milktea.agent.skill.SkillDefinition;
+import com.milktea.agent.skill.SkillManager;
+import com.milktea.agent.workflow.WorkflowDefinition;
+import com.milktea.agent.workflow.WorkflowEngine;
+import com.milktea.agent.workflow.WorkflowExecutionResult;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
+/**
+ * Admin endpoints for managing Memory, Skills, Context, Workflow, Prompts, and RAG.
+ */
 @RestController
 @RequestMapping("/api/admin")
 public class AdminController {
 
     private final PromptManager promptManager;
-    private final ConversationContextManager contextManager;
-    private final SkillRegistry skillRegistry;
+    private final ContextManager contextManager;
+    private final SkillManager skillManager;
     private final RagManager ragManager;
+    private final MemoryManager memoryManager;
+    private final WorkflowEngine workflowEngine;
 
     public AdminController(PromptManager promptManager,
-                           ConversationContextManager contextManager,
-                           SkillRegistry skillRegistry,
-                           RagManager ragManager) {
+                           ContextManager contextManager,
+                           SkillManager skillManager,
+                           RagManager ragManager,
+                           MemoryManager memoryManager,
+                           WorkflowEngine workflowEngine) {
         this.promptManager = promptManager;
         this.contextManager = contextManager;
-        this.skillRegistry = skillRegistry;
+        this.skillManager = skillManager;
         this.ragManager = ragManager;
+        this.memoryManager = memoryManager;
+        this.workflowEngine = workflowEngine;
     }
 
     // ===== Prompt Management =====
@@ -63,31 +76,166 @@ public class AdminController {
 
     @GetMapping("/contexts/{sessionId}")
     public Map<String, Object> getSessionInfo(@PathVariable String sessionId) {
-        return Map.of(
-                "sessionId", sessionId,
-                "historySize", contextManager.getHistorySize(sessionId),
-                "attributes", contextManager.getAllAttributes(sessionId)
-        );
+        return contextManager.getContextInfo(sessionId);
     }
 
     @DeleteMapping("/contexts/{sessionId}")
     public Map<String, String> clearSession(@PathVariable String sessionId) {
-        contextManager.clearHistory(sessionId);
+        contextManager.clearContext(sessionId);
         return Map.of("status", "ok", "message", "会话已清除: " + sessionId);
     }
 
     // ===== Skills Management =====
 
     @GetMapping("/skills")
-    public List<SkillRegistry.SkillInfo> getAllSkills() {
-        return skillRegistry.getAllSkills();
+    public List<SkillDefinition> getAllSkills() {
+        return skillManager.getAllDefinitions();
     }
 
-    @PostMapping("/skills/{name}/toggle")
-    public Map<String, String> toggleSkill(@PathVariable String name, @RequestBody Map<String, Boolean> request) {
+    @PostMapping("/skills/{id}/toggle")
+    public Map<String, String> toggleSkill(@PathVariable String id,
+                                            @RequestBody Map<String, Boolean> request) {
         boolean enabled = request.getOrDefault("enabled", true);
-        skillRegistry.setEnabled(name, enabled);
-        return Map.of("status", "ok", "message", "技能 " + name + " 已" + (enabled ? "启用" : "禁用"));
+        skillManager.setEnabled(id, enabled);
+        return Map.of("status", "ok",
+                "message", "技能 " + id + " 已" + (enabled ? "启用" : "禁用"));
+    }
+
+    @PostMapping("/skills/{id}/priority")
+    public Map<String, String> setSkillPriority(@PathVariable String id,
+                                                 @RequestBody Map<String, Integer> request) {
+        int priority = request.getOrDefault("priority", 10);
+        skillManager.setPriority(id, priority);
+        return Map.of("status", "ok", "message", "技能 " + id + " 优先级已更新为 " + priority);
+    }
+
+    @DeleteMapping("/skills/{id}")
+    public Map<String, String> removeSkill(@PathVariable String id) {
+        skillManager.unregister(id);
+        return Map.of("status", "ok", "message", "技能已删除: " + id);
+    }
+
+    // ===== Memory Management =====
+
+    @GetMapping("/memory/session/{sessionId}")
+    public List<MemoryEntry> getSessionMemory(@PathVariable String sessionId) {
+        return memoryManager.listSessionMemories(sessionId);
+    }
+
+    @PostMapping("/memory/session/{sessionId}")
+    public Map<String, String> saveSessionMemory(@PathVariable String sessionId,
+                                                  @RequestBody Map<String, String> request) {
+        memoryManager.rememberSession(sessionId, request.get("key"),
+                request.get("value"), request.getOrDefault("category", "manual"));
+        return Map.of("status", "ok", "message", "会话记忆已保存");
+    }
+
+    @DeleteMapping("/memory/session/{sessionId}/{key}")
+    public Map<String, String> deleteSessionMemory(@PathVariable String sessionId,
+                                                     @PathVariable String key) {
+        memoryManager.forgetSession(sessionId, key);
+        return Map.of("status", "ok", "message", "会话记忆已删除");
+    }
+
+    @DeleteMapping("/memory/session/{sessionId}")
+    public Map<String, String> clearSessionMemory(@PathVariable String sessionId) {
+        memoryManager.clearSession(sessionId);
+        return Map.of("status", "ok", "message", "会话记忆已清空");
+    }
+
+    @GetMapping("/memory/session/{sessionId}/search")
+    public List<MemoryEntry> searchSessionMemory(@PathVariable String sessionId,
+                                                  @RequestParam String keyword) {
+        return memoryManager.searchSessionMemories(sessionId, keyword);
+    }
+
+    @GetMapping("/memory/user/{userId}")
+    public List<MemoryEntry> getUserMemory(@PathVariable String userId) {
+        return memoryManager.listUserMemories(userId);
+    }
+
+    @PostMapping("/memory/user/{userId}")
+    public Map<String, String> saveUserMemory(@PathVariable String userId,
+                                               @RequestBody Map<String, String> request) {
+        memoryManager.rememberUser(userId, request.get("key"),
+                request.get("value"), request.getOrDefault("category", "manual"));
+        return Map.of("status", "ok", "message", "用户记忆已保存");
+    }
+
+    @DeleteMapping("/memory/user/{userId}/{key}")
+    public Map<String, String> deleteUserMemory(@PathVariable String userId,
+                                                  @PathVariable String key) {
+        memoryManager.forgetUser(userId, key);
+        return Map.of("status", "ok", "message", "用户记忆已删除");
+    }
+
+    @GetMapping("/memory/user/{userId}/search")
+    public List<MemoryEntry> searchUserMemory(@PathVariable String userId,
+                                               @RequestParam String keyword) {
+        return memoryManager.searchUserMemories(userId, keyword);
+    }
+
+    @PostMapping("/memory/user/{userId}/preference")
+    public Map<String, String> savePreference(@PathVariable String userId,
+                                               @RequestBody Map<String, String> request) {
+        memoryManager.savePreference(userId, request.get("key"), request.get("value"));
+        return Map.of("status", "ok", "message", "用户偏好已保存");
+    }
+
+    @GetMapping("/memory/user/{userId}/preference/{prefKey}")
+    public Map<String, String> getPreference(@PathVariable String userId,
+                                              @PathVariable String prefKey) {
+        String value = memoryManager.getPreference(userId, prefKey).orElse("");
+        return Map.of("key", prefKey, "value", value);
+    }
+
+    // ===== Workflow Management =====
+
+    @GetMapping("/workflows")
+    public List<WorkflowDefinition> getAllWorkflows() {
+        return workflowEngine.getAllWorkflows();
+    }
+
+    @GetMapping("/workflows/{workflowId}")
+    public Map<String, Object> getWorkflow(@PathVariable String workflowId) {
+        return workflowEngine.getWorkflow(workflowId)
+                .<Map<String, Object>>map(w -> Map.of(
+                        "id", w.id(),
+                        "name", w.name(),
+                        "description", w.description(),
+                        "nodes", w.nodes(),
+                        "edges", w.edges(),
+                        "config", w.config() != null ? w.config() : Map.of()))
+                .orElse(Map.of("error", "工作流不存在: " + workflowId));
+    }
+
+    @PostMapping("/workflows/{workflowId}/execute")
+    public WorkflowExecutionResult executeWorkflow(
+            @PathVariable String workflowId,
+            @RequestBody(required = false) Map<String, String> params) {
+        return workflowEngine.execute(workflowId,
+                params != null ? params : Map.of());
+    }
+
+    @PostMapping("/workflows/{workflowId}/execute-async")
+    public Map<String, String> executeWorkflowAsync(
+            @PathVariable String workflowId,
+            @RequestBody(required = false) Map<String, String> params) {
+        String executionId = workflowEngine.executeAsync(workflowId,
+                params != null ? params : Map.of());
+        return Map.of("executionId", executionId, "status", "started");
+    }
+
+    @PostMapping("/workflows/interrupt/{executionId}")
+    public Map<String, Object> interruptWorkflow(@PathVariable String executionId) {
+        boolean interrupted = workflowEngine.interrupt(executionId);
+        return Map.of("executionId", executionId, "interrupted", interrupted);
+    }
+
+    @PostMapping("/workflows")
+    public Map<String, String> registerWorkflow(@RequestBody WorkflowDefinition definition) {
+        workflowEngine.registerWorkflow(definition);
+        return Map.of("status", "ok", "message", "工作流已注册: " + definition.id());
     }
 
     // ===== RAG Management =====
