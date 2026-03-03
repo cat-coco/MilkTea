@@ -3,38 +3,35 @@ package com.milktea.agent.controller;
 import com.milktea.agent.context.ConversationContextManager;
 import com.milktea.agent.prompt.PromptManager;
 import com.milktea.agent.rag.RagManager;
-import org.springframework.ai.chat.client.ChatClient;
+import com.milktea.agent.react.AgentResult;
+import com.milktea.agent.react.AgentStep;
+import com.milktea.agent.react.ReactAgent;
+import com.milktea.agent.react.ToolExecutor;
 import org.springframework.ai.chat.messages.Message;
-import org.springframework.ai.chat.messages.SystemMessage;
-import org.springframework.ai.chat.messages.UserMessage;
-import org.springframework.ai.chat.model.ChatModel;
-import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 @RestController
 @RequestMapping("/api/chat")
 public class ChatController {
 
-    private final ChatClient chatClient;
+    private final ReactAgent reactAgent;
     private final PromptManager promptManager;
     private final ConversationContextManager contextManager;
     private final RagManager ragManager;
+    private final ToolExecutor toolExecutor;
 
-    public ChatController(ChatModel chatModel,
+    public ChatController(ReactAgent reactAgent,
                           PromptManager promptManager,
                           ConversationContextManager contextManager,
-                          RagManager ragManager) {
-        this.chatClient = ChatClient.builder(chatModel)
-                .defaultFunctions("createOrder", "cancelOrder", "queryOrder")
-                .build();
+                          RagManager ragManager,
+                          ToolExecutor toolExecutor) {
+        this.reactAgent = reactAgent;
         this.promptManager = promptManager;
         this.contextManager = contextManager;
         this.ragManager = ragManager;
+        this.toolExecutor = toolExecutor;
     }
 
     @PostMapping("/send")
@@ -49,8 +46,10 @@ public class ChatController {
         // RAG: retrieve relevant knowledge
         String ragContext = ragManager.getRelevantContext(userMessage);
 
-        // Build system prompt with RAG context
+        // Build system prompt with ReAct instructions, tool descriptions, and RAG context
         String systemPrompt = promptManager.getPrompt("system");
+        systemPrompt += promptManager.getPrompt("react_instructions");
+        systemPrompt += "\n\n【可用工具】\n" + toolExecutor.getToolDescriptions();
         if (!ragContext.isBlank()) {
             systemPrompt += "\n\n【参考知识库信息】\n" + ragContext;
         }
@@ -58,23 +57,32 @@ public class ChatController {
         // Add user message to context
         contextManager.addUserMessage(sessionId, userMessage);
 
-        // Build message list with history
-        List<Message> messages = new ArrayList<>();
-        messages.add(new SystemMessage(systemPrompt));
-        messages.addAll(contextManager.getHistory(sessionId));
+        // Get conversation history
+        List<Message> history = new ArrayList<>(contextManager.getHistory(sessionId));
 
-        // Call AI
-        String response = chatClient.prompt(new Prompt(messages))
-                .call()
-                .content();
+        // Execute ReAct agent
+        AgentResult result = reactAgent.execute(systemPrompt, history);
 
         // Save assistant response to context
-        contextManager.addAssistantMessage(sessionId, response);
+        contextManager.addAssistantMessage(sessionId, result.finalAnswer());
+
+        // Build step data for frontend
+        List<Map<String, Object>> stepData = new ArrayList<>();
+        for (AgentStep step : result.steps()) {
+            stepData.add(Map.of(
+                    "type", step.type().name(),
+                    "label", step.type().getLabel(),
+                    "content", step.content(),
+                    "timestamp", step.timestamp()
+            ));
+        }
 
         return Map.of(
                 "sessionId", sessionId,
-                "reply", response,
-                "historySize", contextManager.getHistorySize(sessionId)
+                "reply", result.finalAnswer(),
+                "historySize", contextManager.getHistorySize(sessionId),
+                "agentSteps", stepData,
+                "iterations", result.iterations()
         );
     }
 

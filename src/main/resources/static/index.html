@@ -198,6 +198,44 @@
         .knowledge-item .title { font-weight: 600; color: var(--primary); }
         .knowledge-item .keywords { color: #999; font-size: 11px; margin: 2px 0; }
 
+        /* Agent Reasoning Steps */
+        .agent-steps-toggle {
+            display: inline-flex; align-items: center; gap: 4px;
+            padding: 4px 10px; margin-top: 8px;
+            font-size: 11px; color: var(--primary); cursor: pointer;
+            background: var(--bg-cream); border-radius: 12px;
+            border: 1px solid var(--primary-light); transition: all 0.2s;
+        }
+        .agent-steps-toggle:hover { background: var(--primary-light); color: white; }
+        .agent-steps-container {
+            display: none; margin-top: 8px; padding: 10px;
+            background: #FEFAF5; border-radius: 10px;
+            border: 1px solid #EDE0D4; font-size: 12px;
+        }
+        .agent-steps-container.open { display: block; }
+        .agent-step {
+            display: flex; gap: 8px; padding: 6px 0;
+            border-bottom: 1px dashed #EDE0D4;
+        }
+        .agent-step:last-child { border-bottom: none; }
+        .agent-step-badge {
+            flex-shrink: 0; padding: 2px 8px; border-radius: 10px;
+            font-size: 10px; font-weight: 600; color: white;
+            display: flex; align-items: center; gap: 3px; height: fit-content;
+        }
+        .agent-step-badge.THOUGHT { background: #6C8EBF; }
+        .agent-step-badge.ACTION { background: #D4A574; }
+        .agent-step-badge.OBSERVATION { background: #82B366; }
+        .agent-step-badge.FINAL_ANSWER { background: var(--primary); }
+        .agent-step-content {
+            color: #555; line-height: 1.5; word-break: break-word;
+            white-space: pre-wrap;
+        }
+        .agent-iterations {
+            text-align: right; font-size: 10px; color: #aaa;
+            margin-top: 4px; padding-top: 4px;
+        }
+
         @media (max-width: 768px) {
             .sidebar, .admin-panel { display: none !important; }
             .message { max-width: 90%; }
@@ -369,18 +407,48 @@ async function loadWelcome() {
     }
 }
 
-function appendMessage(type, text) {
+function appendMessage(type, text, agentSteps, iterations) {
     const container = document.getElementById('chatMessages');
     const div = document.createElement('div');
     div.className = `message ${type}`;
 
     const avatarText = type === 'bot' ? '🧋' : '👤';
+    let stepsHtml = '';
+
+    if (type === 'bot' && agentSteps && agentSteps.length > 0) {
+        const stepId = 'steps-' + Date.now();
+        const stepIcons = { THOUGHT: '💭', ACTION: '⚡', OBSERVATION: '👁', FINAL_ANSWER: '✅' };
+        const stepsContent = agentSteps.map(step => `
+            <div class="agent-step">
+                <span class="agent-step-badge ${step.type}">${stepIcons[step.type] || '•'} ${escapeHtml(step.label)}</span>
+                <span class="agent-step-content">${escapeHtml(step.content)}</span>
+            </div>
+        `).join('');
+        stepsHtml = `
+            <div class="agent-steps-toggle" onclick="toggleSteps('${stepId}')">
+                <i class="bi bi-diagram-3"></i> 查看推理过程 (${iterations} 轮)
+            </div>
+            <div class="agent-steps-container" id="${stepId}">
+                ${stepsContent}
+                <div class="agent-iterations">共 ${agentSteps.length} 步 · ${iterations} 轮推理</div>
+            </div>
+        `;
+    }
+
     div.innerHTML = `
         <div class="avatar">${avatarText}</div>
-        <div class="bubble">${escapeHtml(text)}</div>
+        <div>
+            <div class="bubble">${escapeHtml(text)}</div>
+            ${stepsHtml}
+        </div>
     `;
     container.appendChild(div);
     container.scrollTop = container.scrollHeight;
+}
+
+function toggleSteps(id) {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle('open');
 }
 
 function showTyping() {
@@ -433,7 +501,7 @@ async function sendMessage() {
         sessionId = data.sessionId;
         document.getElementById('sessionInfo').textContent = `会话: ${sessionId.substring(0, 8)}...`;
         hideTyping();
-        appendMessage('bot', data.reply);
+        appendMessage('bot', data.reply, data.agentSteps, data.iterations);
     } catch (e) {
         hideTyping();
         appendMessage('bot', '抱歉，网络出了点问题，请稍后重试~');
