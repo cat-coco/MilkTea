@@ -49,22 +49,11 @@ public class PromptManager {
             "5. 如果客户信息不完整，主动询问缺少的信息\n" +
             "6. 下单前总结订单内容让客户确认");
 
-        promptTemplates.put("react_instructions",
-            "\n\n【ReAct 推理模式】\n" +
-            "你必须严格按照以下格式进行推理和行动。每次回复只能包含一个完整的推理步骤。\n\n" +
-            "当你需要使用工具时，按以下格式输出：\n" +
-            "Thought: <分析用户意图，思考下一步应该做什么>\n" +
-            "Action: <工具名称，只能是 createOrder / cancelOrder / queryOrder 之一>\n" +
-            "Action Input: <工具参数，必须是合法的JSON格式>\n\n" +
-            "当你不需要使用工具，可以直接回答用户时，按以下格式输出：\n" +
-            "Thought: <分析当前情况>\n" +
-            "Final Answer: <给用户的自然语言回复，要亲切活泼>\n\n" +
-            "重要规则：\n" +
-            "- 每次只能调用一个工具\n" +
-            "- Action Input 必须是完整合法的 JSON\n" +
-            "- 如果信息不完整，不要猜测，用 Final Answer 向用户询问\n" +
-            "- 工具执行后你会收到 Observation，根据 Observation 决定下一步\n" +
-            "- 加料的价格需要加到单价中（如中杯珍珠奶茶+珍珠=15+2=17元）\n");
+        promptTemplates.put("agent_note",
+            "\n\n【Agent说明】\n" +
+            "当前系统使用 spring-ai-alibaba ReactAgent 框架，支持自动工具调用。\n" +
+            "可用工具：createOrder（创建订单）、cancelOrder（取消订单）、queryOrder（查询订单）\n" +
+            "加料的价格需要加到单价中（如中杯珍珠奶茶+珍珠=15+2=17元）\n");
 
         promptTemplates.put("welcome", "欢迎光临茶悦时光！我是智能客服小茶~请问有什么可以帮您的呢？可以点单、查询订单或者退单哦！");
 

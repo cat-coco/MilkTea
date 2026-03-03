@@ -1,0 +1,110 @@
+{
+  "id": "order-workflow",
+  "name": "奶茶点单工作流",
+  "description": "点单 → 检查优惠券 → 检查会员积分升级 → 展示结果",
+  "nodes": [
+    {
+      "id": "start",
+      "name": "开始",
+      "type": "start",
+      "skillId": null,
+      "params": {},
+      "condition": null,
+      "timeoutSeconds": 0,
+      "maxRetries": 0
+    },
+    {
+      "id": "create_order",
+      "name": "创建订单",
+      "type": "agent",
+      "skillId": "createOrder",
+      "params": {},
+      "condition": null,
+      "timeoutSeconds": 30,
+      "maxRetries": 1
+    },
+    {
+      "id": "check_coupon",
+      "name": "检查优惠券",
+      "type": "condition",
+      "skillId": "couponCheck",
+      "params": {
+        "orderId": "{create_order_result}"
+      },
+      "condition": "create_order_result contains 成功",
+      "timeoutSeconds": 10,
+      "maxRetries": 0
+    },
+    {
+      "id": "apply_coupon",
+      "name": "应用优惠券",
+      "type": "skill",
+      "skillId": "couponApply",
+      "params": {
+        "orderId": "{create_order_result}"
+      },
+      "condition": null,
+      "timeoutSeconds": 10,
+      "maxRetries": 1
+    },
+    {
+      "id": "check_membership",
+      "name": "检查会员积分升级",
+      "type": "condition",
+      "skillId": "membershipCheck",
+      "params": {
+        "phone": "{phone}"
+      },
+      "condition": "create_order_result contains 成功",
+      "timeoutSeconds": 10,
+      "maxRetries": 0
+    },
+    {
+      "id": "upgrade_membership",
+      "name": "升级会员",
+      "type": "skill",
+      "skillId": "membershipUpgrade",
+      "params": {
+        "phone": "{phone}"
+      },
+      "condition": null,
+      "timeoutSeconds": 10,
+      "maxRetries": 1
+    },
+    {
+      "id": "display_result",
+      "name": "展示下单结果",
+      "type": "agent",
+      "skillId": null,
+      "params": {},
+      "condition": null,
+      "timeoutSeconds": 0,
+      "maxRetries": 0
+    },
+    {
+      "id": "end",
+      "name": "结束",
+      "type": "end",
+      "skillId": null,
+      "params": {},
+      "condition": null,
+      "timeoutSeconds": 0,
+      "maxRetries": 0
+    }
+  ],
+  "edges": [
+    { "from": "start", "to": "create_order", "label": "开始点单", "condition": null },
+    { "from": "create_order", "to": "check_coupon", "label": "订单创建后检查优惠", "condition": null },
+    { "from": "check_coupon", "to": "apply_coupon", "label": "有优惠券", "condition": "true" },
+    { "from": "check_coupon", "to": "check_membership", "label": "无优惠券", "condition": "false" },
+    { "from": "apply_coupon", "to": "check_membership", "label": "优惠应用后", "condition": null },
+    { "from": "check_membership", "to": "upgrade_membership", "label": "可升级", "condition": "true" },
+    { "from": "check_membership", "to": "display_result", "label": "无需升级", "condition": "false" },
+    { "from": "upgrade_membership", "to": "display_result", "label": "升级后展示", "condition": null },
+    { "from": "display_result", "to": "end", "label": "完成", "condition": null }
+  ],
+  "config": {
+    "maxExecutionTime": 120,
+    "enableRetry": true
+  }
+}

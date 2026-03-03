@@ -42,6 +42,7 @@
         }
         .chat-header h1 { font-size: 18px; font-weight: 600; }
         .chat-header .subtitle { font-size: 12px; opacity: 0.8; }
+        .header-actions { display: flex; gap: 8px; }
 
         /* Main Layout */
         .main-container {
@@ -123,6 +124,15 @@
             40% { transform: scale(1); opacity: 1; }
         }
 
+        /* Triggered skills badge */
+        .triggered-skills {
+            display: flex; gap: 4px; flex-wrap: wrap; margin-top: 6px;
+        }
+        .skill-badge {
+            padding: 2px 8px; border-radius: 10px; font-size: 10px;
+            background: var(--accent); color: white; font-weight: 500;
+        }
+
         /* Input Area */
         .chat-input-area {
             padding: 16px 20px; background: white;
@@ -158,7 +168,7 @@
 
         /* Admin Panel */
         .admin-panel {
-            width: 320px; background: white; border-left: 1px solid #e8ddd2;
+            width: 360px; background: white; border-left: 1px solid #e8ddd2;
             overflow-y: auto; display: none;
         }
         .admin-panel.active { display: block; }
@@ -198,43 +208,46 @@
         .knowledge-item .title { font-weight: 600; color: var(--primary); }
         .knowledge-item .keywords { color: #999; font-size: 11px; margin: 2px 0; }
 
-        /* Agent Reasoning Steps */
-        .agent-steps-toggle {
+        /* Workflow Visualization */
+        .workflow-container {
+            padding: 12px; background: #FEFAF5; border-radius: 8px;
+            border: 1px solid #EDE0D4; margin-top: 8px;
+        }
+        .workflow-node {
+            display: flex; align-items: center; gap: 8px;
+            padding: 8px 12px; margin: 4px 0; border-radius: 8px;
+            font-size: 12px; cursor: pointer; transition: all 0.2s;
+            border: 1px solid #e8ddd2;
+        }
+        .workflow-node.start { background: #e8f5e9; border-color: #a5d6a7; }
+        .workflow-node.end { background: #fce4ec; border-color: #ef9a9a; }
+        .workflow-node.agent { background: #e3f2fd; border-color: #90caf9; }
+        .workflow-node.skill { background: #fff3e0; border-color: #ffcc80; }
+        .workflow-node.condition { background: #f3e5f5; border-color: #ce93d8; }
+        .workflow-node.completed { opacity: 0.6; text-decoration: line-through; }
+        .workflow-node.active { border-color: var(--primary); box-shadow: 0 0 8px rgba(139,94,60,0.3); }
+        .workflow-node .node-icon { flex-shrink: 0; width: 20px; text-align: center; }
+        .workflow-node .node-name { flex: 1; }
+        .workflow-node .node-status { font-size: 10px; color: #999; }
+        .workflow-arrow {
+            text-align: center; color: #ccc; font-size: 14px; margin: 2px 0;
+        }
+        .workflow-toggle {
             display: inline-flex; align-items: center; gap: 4px;
-            padding: 4px 10px; margin-top: 8px;
-            font-size: 11px; color: var(--primary); cursor: pointer;
-            background: var(--bg-cream); border-radius: 12px;
+            padding: 4px 10px; font-size: 11px; color: var(--primary);
+            cursor: pointer; background: var(--bg-cream); border-radius: 12px;
             border: 1px solid var(--primary-light); transition: all 0.2s;
         }
-        .agent-steps-toggle:hover { background: var(--primary-light); color: white; }
-        .agent-steps-container {
-            display: none; margin-top: 8px; padding: 10px;
-            background: #FEFAF5; border-radius: 10px;
-            border: 1px solid #EDE0D4; font-size: 12px;
+        .workflow-toggle:hover { background: var(--primary-light); color: white; }
+
+        /* Memory item */
+        .memory-item {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 6px 8px; margin: 3px 0; background: var(--bg-cream);
+            border-radius: 6px; font-size: 11px;
         }
-        .agent-steps-container.open { display: block; }
-        .agent-step {
-            display: flex; gap: 8px; padding: 6px 0;
-            border-bottom: 1px dashed #EDE0D4;
-        }
-        .agent-step:last-child { border-bottom: none; }
-        .agent-step-badge {
-            flex-shrink: 0; padding: 2px 8px; border-radius: 10px;
-            font-size: 10px; font-weight: 600; color: white;
-            display: flex; align-items: center; gap: 3px; height: fit-content;
-        }
-        .agent-step-badge.THOUGHT { background: #6C8EBF; }
-        .agent-step-badge.ACTION { background: #D4A574; }
-        .agent-step-badge.OBSERVATION { background: #82B366; }
-        .agent-step-badge.FINAL_ANSWER { background: var(--primary); }
-        .agent-step-content {
-            color: #555; line-height: 1.5; word-break: break-word;
-            white-space: pre-wrap;
-        }
-        .agent-iterations {
-            text-align: right; font-size: 10px; color: #aaa;
-            margin-top: 4px; padding-top: 4px;
-        }
+        .memory-item .mem-key { font-weight: 600; color: var(--primary); }
+        .memory-item .mem-val { color: #666; max-width: 60%; overflow: hidden; text-overflow: ellipsis; }
 
         @media (max-width: 768px) {
             .sidebar, .admin-panel { display: none !important; }
@@ -250,10 +263,10 @@
         <div class="logo-icon">🧋</div>
         <div>
             <h1>茶悦时光</h1>
-            <div class="subtitle">AI智能客服小茶为您服务</div>
+            <div class="subtitle">AI智能客服小茶为您服务 (ReactAgent v2.0)</div>
         </div>
     </div>
-    <div>
+    <div class="header-actions">
         <button class="btn btn-sm btn-outline-light" onclick="toggleAdmin()" title="管理面板">
             <i class="bi bi-gear"></i> 管理
         </button>
@@ -297,8 +310,20 @@
             <span class="quick-btn" onclick="sendQuick('我想查询我的订单')">查询订单</span>
             <span class="quick-btn" onclick="sendQuick('我想取消订单')">取消订单</span>
             <span class="quick-btn" onclick="sendQuick('有什么推荐的吗？')">推荐</span>
-            <span class="quick-btn" onclick="sendQuick('你们有什么配送方式？')">配送</span>
-            <span class="quick-btn" onclick="sendQuick('退单政策是怎样的？')">退单政策</span>
+            <span class="quick-btn" onclick="sendQuick('帮我总结一下刚才的对话')">总结</span>
+            <span class="quick-btn" onclick="sendQuick('翻译成英文：你好')">翻译</span>
+        </div>
+
+        <!-- Workflow Visualization (collapsible) -->
+        <div class="sidebar-section">
+            <h3 onclick="toggleWorkflowPanel()" style="cursor:pointer">
+                <span><i class="bi bi-diagram-3"></i> 工作流</span>
+                <i class="bi bi-chevron-down" id="workflowChevron"></i>
+            </h3>
+            <div id="workflowPanel" style="display:none">
+                <div id="workflowList"></div>
+                <button class="admin-btn" style="margin-top:8px" onclick="loadWorkflows()">刷新</button>
+            </div>
         </div>
     </div>
 
@@ -350,6 +375,23 @@
             </div>
         </div>
 
+        <!-- Memory Management -->
+        <div class="admin-section">
+            <h4 onclick="toggleSection(this)">
+                <span><i class="bi bi-database"></i> 记忆管理</span>
+                <i class="bi bi-chevron-down"></i>
+            </h4>
+            <div class="content" id="memoryPanel">
+                <div style="margin-bottom:6px;font-size:11px;color:#999">会话记忆</div>
+                <div id="sessionMemoryList"></div>
+                <button class="admin-btn" onclick="loadSessionMemory()">刷新会话记忆</button>
+                <hr style="margin:8px 0">
+                <input class="admin-input" id="memKey" placeholder="记忆Key">
+                <input class="admin-input" id="memValue" placeholder="记忆Value">
+                <button class="admin-btn" onclick="saveMemory()">保存记忆</button>
+            </div>
+        </div>
+
         <!-- Skills Management -->
         <div class="admin-section">
             <h4 onclick="toggleSection(this)">
@@ -358,6 +400,18 @@
             </h4>
             <div class="content" id="skillsPanel">
                 <div id="skillsList"></div>
+            </div>
+        </div>
+
+        <!-- Workflow Management -->
+        <div class="admin-section">
+            <h4 onclick="toggleSection(this)">
+                <span><i class="bi bi-signpost-split"></i> 工作流管理</span>
+                <i class="bi bi-chevron-down"></i>
+            </h4>
+            <div class="content" id="workflowAdminPanel">
+                <div id="workflowAdminList"></div>
+                <button class="admin-btn" onclick="loadWorkflowAdmin()">刷新</button>
             </div>
         </div>
 
@@ -387,6 +441,7 @@
 <script>
 const API_BASE = window.API_BASE || '';
 let sessionId = null;
+let tabId = 'tab-' + Date.now() + '-' + Math.random().toString(36).substring(2, 8);
 let isLoading = false;
 
 // Init
@@ -395,6 +450,7 @@ document.addEventListener('DOMContentLoaded', () => {
     loadPrompts();
     loadSkills();
     loadRAG();
+    loadWorkflows();
 });
 
 async function loadWelcome() {
@@ -407,30 +463,18 @@ async function loadWelcome() {
     }
 }
 
-function appendMessage(type, text, agentSteps, iterations) {
+function appendMessage(type, text, triggeredSkills) {
     const container = document.getElementById('chatMessages');
     const div = document.createElement('div');
     div.className = `message ${type}`;
 
     const avatarText = type === 'bot' ? '🧋' : '👤';
-    let stepsHtml = '';
+    let skillsHtml = '';
 
-    if (type === 'bot' && agentSteps && agentSteps.length > 0) {
-        const stepId = 'steps-' + Date.now();
-        const stepIcons = { THOUGHT: '💭', ACTION: '⚡', OBSERVATION: '👁', FINAL_ANSWER: '✅' };
-        const stepsContent = agentSteps.map(step => `
-            <div class="agent-step">
-                <span class="agent-step-badge ${step.type}">${stepIcons[step.type] || '•'} ${escapeHtml(step.label)}</span>
-                <span class="agent-step-content">${escapeHtml(step.content)}</span>
-            </div>
-        `).join('');
-        stepsHtml = `
-            <div class="agent-steps-toggle" onclick="toggleSteps('${stepId}')">
-                <i class="bi bi-diagram-3"></i> 查看推理过程 (${iterations} 轮)
-            </div>
-            <div class="agent-steps-container" id="${stepId}">
-                ${stepsContent}
-                <div class="agent-iterations">共 ${agentSteps.length} 步 · ${iterations} 轮推理</div>
+    if (type === 'bot' && triggeredSkills && triggeredSkills.length > 0) {
+        skillsHtml = `
+            <div class="triggered-skills">
+                ${triggeredSkills.map(s => `<span class="skill-badge">${escapeHtml(s)}</span>`).join('')}
             </div>
         `;
     }
@@ -439,16 +483,11 @@ function appendMessage(type, text, agentSteps, iterations) {
         <div class="avatar">${avatarText}</div>
         <div>
             <div class="bubble">${escapeHtml(text)}</div>
-            ${stepsHtml}
+            ${skillsHtml}
         </div>
     `;
     container.appendChild(div);
     container.scrollTop = container.scrollHeight;
-}
-
-function toggleSteps(id) {
-    const el = document.getElementById(id);
-    if (el) el.classList.toggle('open');
 }
 
 function showTyping() {
@@ -495,13 +534,14 @@ async function sendMessage() {
         const res = await fetch(`${API_BASE}/api/chat/send`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ sessionId, message: text })
+            body: JSON.stringify({ sessionId, tabId, message: text })
         });
         const data = await res.json();
         sessionId = data.sessionId;
-        document.getElementById('sessionInfo').textContent = `会话: ${sessionId.substring(0, 8)}...`;
+        document.getElementById('sessionInfo').textContent =
+            `会话: ${sessionId.substring(0, 8)}... | Tab: ${tabId.substring(0, 8)}...`;
         hideTyping();
-        appendMessage('bot', data.reply, data.agentSteps, data.iterations);
+        appendMessage('bot', data.reply, data.triggeredSkills);
     } catch (e) {
         hideTyping();
         appendMessage('bot', '抱歉，网络出了点问题，请稍后重试~');
@@ -543,6 +583,7 @@ async function clearChat() {
 
 function newSession() {
     sessionId = null;
+    tabId = 'tab-' + Date.now() + '-' + Math.random().toString(36).substring(2, 8);
     document.getElementById('chatMessages').innerHTML = '';
     document.getElementById('sessionInfo').textContent = '';
     loadWelcome();
@@ -556,6 +597,20 @@ function toggleAdmin() {
 
 function toggleSection(el) {
     el.closest('.admin-section').classList.toggle('open');
+}
+
+// Workflow sidebar panel
+function toggleWorkflowPanel() {
+    const panel = document.getElementById('workflowPanel');
+    const chevron = document.getElementById('workflowChevron');
+    if (panel.style.display === 'none') {
+        panel.style.display = 'block';
+        chevron.className = 'bi bi-chevron-up';
+        loadWorkflows();
+    } else {
+        panel.style.display = 'none';
+        chevron.className = 'bi bi-chevron-down';
+    }
 }
 
 // Prompt Management
@@ -610,7 +665,7 @@ async function loadContextInfo() {
                 <div style="font-size:11px;margin-top:4px;color:#666">
                     ${Array.from(data.sessionIds || []).map(id =>
                         `<div>${id.substring(0, 16)}...
-                         <button class="admin-btn danger" onclick="clearSession('${id}')">清除</button></div>`
+                         <button class="admin-btn danger" onclick="clearAdminSession('${id}')">清除</button></div>`
                     ).join('')}
                 </div>
             </div>
@@ -618,10 +673,58 @@ async function loadContextInfo() {
     } catch (e) { /* ignore */ }
 }
 
-async function clearSession(sid) {
+async function clearAdminSession(sid) {
     try {
         await fetch(`${API_BASE}/api/admin/contexts/${sid}`, { method: 'DELETE' });
         loadContextInfo();
+    } catch (e) { /* ignore */ }
+}
+
+// Memory Management
+async function loadSessionMemory() {
+    if (!sessionId) {
+        document.getElementById('sessionMemoryList').innerHTML =
+            '<div style="font-size:11px;color:#999">暂无会话</div>';
+        return;
+    }
+    try {
+        const res = await fetch(`${API_BASE}/api/admin/memory/session/${sessionId}`);
+        const data = await res.json();
+        document.getElementById('sessionMemoryList').innerHTML = data.length === 0
+            ? '<div style="font-size:11px;color:#999">暂无记忆</div>'
+            : data.map(m => `
+                <div class="memory-item">
+                    <span class="mem-key">${escapeHtml(m.key)}</span>
+                    <span class="mem-val">${escapeHtml(m.value?.substring(0, 50) || '')}</span>
+                    <button class="admin-btn danger" style="padding:1px 6px;font-size:10px"
+                            onclick="deleteMemory('${m.key}')">x</button>
+                </div>
+            `).join('');
+    } catch (e) { /* ignore */ }
+}
+
+async function saveMemory() {
+    if (!sessionId) return;
+    const key = document.getElementById('memKey').value.trim();
+    const value = document.getElementById('memValue').value.trim();
+    if (!key || !value) return;
+    try {
+        await fetch(`${API_BASE}/api/admin/memory/session/${sessionId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ key, value, category: 'manual' })
+        });
+        document.getElementById('memKey').value = '';
+        document.getElementById('memValue').value = '';
+        loadSessionMemory();
+    } catch (e) { /* ignore */ }
+}
+
+async function deleteMemory(key) {
+    if (!sessionId) return;
+    try {
+        await fetch(`${API_BASE}/api/admin/memory/session/${sessionId}/${key}`, { method: 'DELETE' });
+        loadSessionMemory();
     } catch (e) { /* ignore */ }
 }
 
@@ -633,26 +736,125 @@ async function loadSkills() {
         document.getElementById('skillsList').innerHTML = data.map(skill => `
             <div class="skill-item">
                 <div>
-                    <strong>${escapeHtml(skill.displayName)}</strong>
+                    <strong>${escapeHtml(skill.name)}</strong>
                     <div style="font-size:11px;color:#666">${escapeHtml(skill.description)}</div>
+                    <div style="font-size:10px;color:#999">
+                        优先级: ${skill.priority}
+                        ${skill.triggerKeywords && skill.triggerKeywords.length > 0
+                            ? '| 触发词: ' + skill.triggerKeywords.join(', ') : ''}
+                    </div>
                 </div>
                 <div class="form-check form-switch">
                     <input class="form-check-input" type="checkbox" ${skill.enabled ? 'checked' : ''}
-                           onchange="toggleSkill('${skill.name}', this.checked)">
+                           onchange="toggleSkill('${skill.id}', this.checked)">
                 </div>
             </div>
         `).join('');
     } catch (e) { /* ignore */ }
 }
 
-async function toggleSkill(name, enabled) {
+async function toggleSkill(id, enabled) {
     try {
-        await fetch(`${API_BASE}/api/admin/skills/${name}/toggle`, {
+        await fetch(`${API_BASE}/api/admin/skills/${id}/toggle`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ enabled })
         });
     } catch (e) { /* ignore */ }
+}
+
+// Workflow Management
+async function loadWorkflows() {
+    try {
+        const res = await fetch(`${API_BASE}/api/admin/workflows`);
+        const data = await res.json();
+        renderWorkflowList(data, 'workflowList');
+        renderWorkflowAdmin(data);
+    } catch (e) { /* ignore */ }
+}
+
+function renderWorkflowList(workflows, containerId) {
+    const container = document.getElementById(containerId);
+    if (!workflows || workflows.length === 0) {
+        container.innerHTML = '<div style="font-size:11px;color:#999">暂无工作流</div>';
+        return;
+    }
+    container.innerHTML = workflows.map(wf => {
+        const nodeIcons = { start: '▶', end: '⏹', agent: '🤖', skill: '⚡', condition: '❓' };
+        const nodesHtml = wf.nodes.map((node, i) => `
+            <div class="workflow-node ${node.type}" id="wf-node-${wf.id}-${node.id}">
+                <span class="node-icon">${nodeIcons[node.type] || '●'}</span>
+                <span class="node-name">${escapeHtml(node.name)}</span>
+                <span class="node-status">${node.type}</span>
+            </div>
+            ${i < wf.nodes.length - 1 ? '<div class="workflow-arrow">↓</div>' : ''}
+        `).join('');
+        return `
+            <div class="workflow-container">
+                <div style="font-weight:600;color:var(--primary);font-size:12px;margin-bottom:8px">
+                    ${escapeHtml(wf.name)}
+                </div>
+                <div style="font-size:11px;color:#666;margin-bottom:8px">
+                    ${escapeHtml(wf.description || '')}
+                </div>
+                ${nodesHtml}
+                <button class="admin-btn" style="margin-top:8px"
+                        onclick="executeWorkflow('${wf.id}')">执行工作流</button>
+            </div>
+        `;
+    }).join('');
+}
+
+function renderWorkflowAdmin(workflows) {
+    const container = document.getElementById('workflowAdminList');
+    if (!container) return;
+    if (!workflows || workflows.length === 0) {
+        container.innerHTML = '<div style="font-size:11px;color:#999">暂无工作流</div>';
+        return;
+    }
+    container.innerHTML = workflows.map(wf => `
+        <div class="knowledge-item">
+            <div class="title">${escapeHtml(wf.name)} (${wf.id})</div>
+            <div style="font-size:11px;color:#666;margin-top:4px">
+                ${escapeHtml(wf.description || '')}
+            </div>
+            <div style="font-size:10px;color:#999;margin-top:2px">
+                节点数: ${wf.nodes.length} | 边数: ${wf.edges.length}
+            </div>
+            <button class="admin-btn" style="margin-top:4px"
+                    onclick="executeWorkflow('${wf.id}')">执行</button>
+        </div>
+    `).join('');
+}
+
+async function loadWorkflowAdmin() {
+    loadWorkflows();
+}
+
+async function executeWorkflow(workflowId) {
+    try {
+        // Mark all nodes as pending
+        const res = await fetch(`${API_BASE}/api/admin/workflows/${workflowId}/execute`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({})
+        });
+        const result = await res.json();
+        // Update node statuses based on execution result
+        if (result.steps) {
+            result.steps.forEach(step => {
+                const nodeEl = document.getElementById(`wf-node-${workflowId}-${step.nodeId}`);
+                if (nodeEl) {
+                    nodeEl.classList.add(step.status === 'completed' ? 'completed' : 'active');
+                    const statusEl = nodeEl.querySelector('.node-status');
+                    if (statusEl) statusEl.textContent = step.status;
+                }
+            });
+        }
+        appendMessage('bot', `工作流 "${workflowId}" 执行完成，状态: ${result.status}，耗时: ${result.durationMs}ms`);
+    } catch (e) {
+        appendMessage('bot', `工作流执行失败: ${e.message}`);
+    }
 }
 
 // RAG Management
