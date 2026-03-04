@@ -24,10 +24,10 @@ public class OrderTools {
         this.orderService = orderService;
     }
 
-    @Tool(name = "createOrder", description = "创建奶茶订单-当客户确认要下单时调用。需要客户姓名、手机号和饮品详细信息。")
+    @Tool(name = "createOrder", description = "创建奶茶订单-当客户确认要下单时调用。必须先收集客户姓名和手机号，否则无法创建订单。")
     public String createOrder(
-            @ToolParam(description = "客户姓名") String customerName,
-            @ToolParam(description = "客户手机号") String phone,
+            @ToolParam(description = "客户姓名，必填，不能为空") String customerName,
+            @ToolParam(description = "客户手机号，必填，不能为空") String phone,
             @ToolParam(description = "饮品名称") String productName,
             @ToolParam(description = "杯型：小杯/中杯/大杯") String size,
             @ToolParam(description = "甜度：无糖/少糖/半糖/正常糖/多糖") String sweetness,
@@ -35,7 +35,18 @@ public class OrderTools {
             @ToolParam(description = "加料：珍珠/椰果/仙草/布丁/芋圆，可为空") String topping,
             @ToolParam(description = "数量") int quantity,
             @ToolParam(description = "单价（元）") double unitPrice,
-            @ToolParam(description = "备注") String remark) {
+            @ToolParam(description = "备注，可为空") String remark) {
+
+        // Validate required fields
+        if (customerName == null || customerName.isBlank()) {
+            return "下单失败：缺少客户姓名，请先询问客户姓名后再下单。";
+        }
+        if (phone == null || phone.isBlank()) {
+            return "下单失败：缺少客户手机号，请先询问客户手机号后再下单。";
+        }
+        if (productName == null || productName.isBlank()) {
+            return "下单失败：缺少饮品名称，请先确认客户要点什么饮品。";
+        }
 
         OrderItem item = new OrderItem(productName, size, sweetness, ice, topping, quantity, unitPrice);
         Order order = orderService.createOrder(customerName, phone, List.of(item), remark);
