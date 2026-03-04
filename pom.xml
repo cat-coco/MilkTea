@@ -19,6 +19,13 @@
 
     <properties>
         <java.version>17</java.version>
+        <!--
+            Spring AI Alibaba version compatibility:
+            - spring-ai-alibaba 1.1.2.0 requires spring-ai 1.1.x (tested with 1.1.2)
+            - spring-ai-alibaba 1.1.2.0 is NOT compatible with spring-ai 1.0.0-M5 or 1.0.0-M6
+              (API breaking changes: artifact coordinates, @Tool annotations, ChatModel interface)
+            - Always keep spring-ai and spring-ai-alibaba major.minor versions aligned
+        -->
         <spring-ai.version>1.1.2</spring-ai.version>
         <spring-ai-alibaba.version>1.1.2.0</spring-ai-alibaba.version>
     </properties>
@@ -82,6 +89,35 @@
 
     <build>
         <plugins>
+            <!-- Enforce minimum Spring AI version to prevent incompatible downgrades -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-enforcer-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>enforce-spring-ai-version</id>
+                        <goals>
+                            <goal>enforce</goal>
+                        </goals>
+                        <configuration>
+                            <rules>
+                                <bannedDependencies>
+                                    <excludes>
+                                        <!-- Spring AI Alibaba 1.1.2.0 is incompatible with Spring AI 1.0.x milestone releases -->
+                                        <exclude>org.springframework.ai:*:[0,1.1.0)</exclude>
+                                    </excludes>
+                                    <message>
+                                        Spring AI Alibaba 1.1.2.0 requires Spring AI 1.1.x or later.
+                                        It is NOT compatible with Spring AI 1.0.0-M5 or 1.0.0-M6.
+                                        Please use spring-ai.version=1.1.2 or higher.
+                                    </message>
+                                </bannedDependencies>
+                            </rules>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
