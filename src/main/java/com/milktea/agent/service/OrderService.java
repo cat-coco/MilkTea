@@ -20,6 +20,15 @@ public class OrderService {
     }
 
     public Order createOrder(String customerName, String phone, List<OrderItem> items, String remark) {
+        if (customerName == null || customerName.isBlank()) {
+            throw new IllegalArgumentException("客户姓名不能为空");
+        }
+        if (phone == null || phone.isBlank()) {
+            throw new IllegalArgumentException("客户手机号不能为空");
+        }
+        if (items == null || items.isEmpty()) {
+            throw new IllegalArgumentException("订单商品不能为空");
+        }
         Order order = new Order();
         order.setOrderId(orderRepository.generateOrderId());
         order.setCustomerName(customerName);
