@@ -7,11 +7,13 @@ import com.alibaba.cloud.ai.graph.saver.MemorySaver;
 import com.alibaba.cloud.ai.graph.skills.registry.SkillRegistry;
 import com.alibaba.cloud.ai.graph.skills.registry.classpath.ClasspathSkillRegistry;
 import org.springframework.ai.chat.model.ChatModel;
+import org.springframework.ai.tool.ToolCallback;
+import org.springframework.ai.tool.ToolCallbacks;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Configures the MilkTea ReactAgent ecosystem using spring-ai-alibaba-agent-framework.
@@ -63,13 +65,26 @@ public class MilkTeaAgentConfig {
 
     @Bean
     public SkillsAgentHook skillsAgentHook(SkillRegistry skillRegistry, OrderTools orderTools) {
+        // Convert @Tool annotated methods to ToolCallback instances
+        ToolCallback[] allCallbacks = ToolCallbacks.from(orderTools);
+
+        // Group ToolCallbacks by skill name based on tool name mapping
+        Map<String, List<ToolCallback>> toolsBySkill = new HashMap<>();
+        for (ToolCallback callback : allCallbacks) {
+            String toolName = callback.getToolDefinition().name();
+            switch (toolName) {
+                case "createOrder" -> toolsBySkill
+                        .computeIfAbsent("create-order", k -> new ArrayList<>()).add(callback);
+                case "cancelOrder" -> toolsBySkill
+                        .computeIfAbsent("cancel-order", k -> new ArrayList<>()).add(callback);
+                case "queryOrder" -> toolsBySkill
+                        .computeIfAbsent("query-order", k -> new ArrayList<>()).add(callback);
+            }
+        }
+
         return SkillsAgentHook.builder()
                 .skillRegistry(skillRegistry)
-                .groupedTools(Map.of(
-                        "create-order", List.of(orderTools),
-                        "cancel-order", List.of(orderTools),
-                        "query-order", List.of(orderTools)
-                ))
+                .groupedTools(toolsBySkill)
                 .build();
     }
 
