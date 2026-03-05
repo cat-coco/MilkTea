@@ -8,7 +8,7 @@ import com.alibaba.cloud.ai.graph.skills.registry.SkillRegistry;
 import com.alibaba.cloud.ai.graph.skills.registry.classpath.ClasspathSkillRegistry;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.tool.ToolCallback;
-import org.springframework.ai.tool.ToolCallbacks;
+import org.springframework.ai.tool.method.MethodToolCallbackProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -65,8 +65,11 @@ public class MilkTeaAgentConfig {
 
     @Bean
     public SkillsAgentHook skillsAgentHook(SkillRegistry skillRegistry, OrderTools orderTools) {
-        // Convert @Tool annotated methods to ToolCallback instances
-        ToolCallback[] allCallbacks = ToolCallbacks.from(orderTools);
+        // Convert @Tool annotated methods to ToolCallback instances via MethodToolCallbackProvider
+        ToolCallback[] allCallbacks = MethodToolCallbackProvider.builder()
+                .toolObjects(orderTools)
+                .build()
+                .getToolCallbacks();
 
         // Group ToolCallbacks by skill name based on tool name mapping
         Map<String, List<ToolCallback>> toolsBySkill = new HashMap<>();
