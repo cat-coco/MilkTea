@@ -1,8 +1,7 @@
 package com.milktea.agent.workflow;
 
+import com.alibaba.cloud.ai.graph.skills.registry.SkillRegistry;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.milktea.agent.skill.BaseSkill;
-import com.milktea.agent.skill.SkillManager;
 import com.milktea.agent.workflow.WorkflowDefinition.WorkflowEdge;
 import com.milktea.agent.workflow.WorkflowDefinition.WorkflowNode;
 import com.milktea.agent.workflow.WorkflowExecutionResult.StepResult;
@@ -18,13 +17,14 @@ import java.util.concurrent.*;
 /**
  * Engine for parsing, executing, interrupting, and retrying JSON-defined workflows.
  * Supports branching (if-else), loops (for/while), sequential execution, and timeout control.
+ * Uses Spring AI Alibaba's SkillRegistry for skill content retrieval.
  */
 @Component
 public class WorkflowEngine {
 
     private static final Logger log = LoggerFactory.getLogger(WorkflowEngine.class);
 
-    private final SkillManager skillManager;
+    private final SkillRegistry skillRegistry;
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final Map<String, WorkflowDefinition> workflows = new ConcurrentHashMap<>();
     private final ExecutorService executor = Executors.newCachedThreadPool();
@@ -32,8 +32,8 @@ public class WorkflowEngine {
     // Active workflow executions for interrupt support
     private final Map<String, Future<?>> activeExecutions = new ConcurrentHashMap<>();
 
-    public WorkflowEngine(SkillManager skillManager) {
-        this.skillManager = skillManager;
+    public WorkflowEngine(SkillRegistry skillRegistry) {
+        this.skillRegistry = skillRegistry;
         loadDefaultWorkflows();
     }
 
@@ -93,7 +93,6 @@ public class WorkflowEngine {
             WorkflowNode node = findNode(workflow, currentNodeId);
             if (node == null) break;
 
-            long nodeStart = System.currentTimeMillis();
             StepResult stepResult = executeNode(node, state);
             steps.add(stepResult);
 
@@ -150,25 +149,14 @@ public class WorkflowEngine {
             String output;
             switch (node.type()) {
                 case "skill" -> {
-                    Optional<BaseSkill> skill = skillManager.getSkill(node.skillId());
-                    if (skill.isEmpty()) {
+                    // Use SkillRegistry to read skill content (progressive disclosure)
+                    boolean exists = skillRegistry.contains(node.skillId());
+                    if (!exists) {
                         output = "Skill not found: " + node.skillId();
                         return new StepResult(node.id(), node.name(), node.type(),
                                 "failed", output, System.currentTimeMillis() - start);
                     }
-                    Map<String, String> params = new HashMap<>();
-                    if (node.params() != null) {
-                        node.params().forEach((k, v) -> {
-                            // Support variable interpolation from state
-                            String resolved = resolveVariable(v, state);
-                            params.put(k, resolved);
-                        });
-                    }
-                    if (node.timeoutSeconds() > 0) {
-                        output = executeWithTimeout(skill.get(), params, node.timeoutSeconds());
-                    } else {
-                        output = skill.get().execute(params);
-                    }
+                    output = skillRegistry.readSkillContent(node.skillId());
                     state.put(node.id() + "_result", output);
                 }
                 case "condition" -> {
@@ -190,17 +178,6 @@ public class WorkflowEngine {
         } catch (Exception e) {
             return new StepResult(node.id(), node.name(), node.type(),
                     "failed", e.getMessage(), System.currentTimeMillis() - start);
-        }
-    }
-
-    private String executeWithTimeout(BaseSkill skill, Map<String, String> params, int timeoutSeconds) {
-        try {
-            Future<String> future = executor.submit(() -> skill.execute(params));
-            return future.get(timeoutSeconds, TimeUnit.SECONDS);
-        } catch (TimeoutException e) {
-            return "Timeout after " + timeoutSeconds + "s";
-        } catch (Exception e) {
-            return "Error: " + e.getMessage();
         }
     }
 

@@ -2,15 +2,20 @@ package com.milktea.agent.agent;
 
 import com.alibaba.cloud.ai.graph.agent.ReactAgent;
 import com.alibaba.cloud.ai.graph.agent.flow.agent.SequentialAgent;
+import com.alibaba.cloud.ai.graph.agent.hook.skills.SkillsAgentHook;
 import com.alibaba.cloud.ai.graph.saver.MemorySaver;
+import com.alibaba.cloud.ai.graph.skills.registry.SkillRegistry;
+import com.alibaba.cloud.ai.graph.skills.registry.classpath.ClasspathSkillRegistry;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * Configures the MilkTea ReactAgent ecosystem using spring-ai-alibaba-agent-framework.
+ * Uses ClasspathSkillRegistry + SkillsAgentHook for progressive disclosure of skills.
  * Creates a SequentialAgent workflow: Order → Coupon Check → Membership Check → Result Display.
  */
 @Configuration
@@ -23,29 +28,12 @@ public class MilkTeaAgentConfig {
             3. 帮助客户查询订单状态（查询订单）
             4. 帮助客户进行文本总结和翻译
 
-            【菜单信息】
-            - 经典珍珠奶茶: 小杯12元/中杯15元/大杯18元
-            - 抹茶拿铁: 小杯14元/中杯17元/大杯20元
-            - 杨枝甘露: 小杯16元/中杯19元/大杯22元
-            - 芋泥波波奶茶: 小杯15元/中杯18元/大杯21元
-            - 草莓摇摇乐: 小杯13元/中杯16元/大杯19元
-            - 桂花乌龙茶: 小杯10元/中杯13元/大杯16元
-            - 黑糖鹿丸鲜奶: 小杯14元/中杯17元/大杯20元
-            - 多肉葡萄: 小杯15元/中杯18元/大杯21元
-
-            【加料价格】珍珠+2元 / 椰果+2元 / 仙草+3元 / 布丁+3元 / 芋圆+3元
-            【甜度】无糖/少糖/半糖/正常糖/多糖
-            【冰度】去冰/少冰/正常冰/多冰/热饮
-            【杯型】小杯/中杯/大杯
+            请根据可用的 Skills 技能列表来判断需要使用哪个技能。
+            当你需要使用某个技能时，先通过 read_skill 工具加载该技能的详细指令，然后按照指令执行。
 
             【交互规则】
-            1. 下单时必须收集以下全部信息才能调用下单工具：客户姓名、手机号、饮品名称、杯型、甜度、冰度、加料、数量
-            2. 特别重要：客户姓名和手机号是必填项，如果客户没有提供，必须主动询问，绝对不能跳过
-            3. 退单时获取订单号和原因，确认后调用退单工具
-            4. 查询时可通过订单号、手机号或姓名查询
-            5. 对话自然亲切，适当推荐饮品
-            6. 信息不完整时主动询问缺少的信息
-            7. 下单前总结订单内容（包含客户姓名、手机号、饮品详情）让客户确认
+            1. 对话自然亲切，适当推荐饮品
+            2. 信息不完整时主动询问缺少的信息
             """;
 
     private static final String COUPON_INSTRUCTION = """
@@ -67,12 +55,31 @@ public class MilkTeaAgentConfig {
             """;
 
     @Bean
-    public ReactAgent mainAgent(ChatModel chatModel, OrderTools orderTools) {
+    public SkillRegistry skillRegistry() {
+        return ClasspathSkillRegistry.builder()
+                .classpathPath("skills")
+                .build();
+    }
+
+    @Bean
+    public SkillsAgentHook skillsAgentHook(SkillRegistry skillRegistry, OrderTools orderTools) {
+        return SkillsAgentHook.builder()
+                .skillRegistry(skillRegistry)
+                .groupedTools(Map.of(
+                        "create-order", List.of(orderTools),
+                        "cancel-order", List.of(orderTools),
+                        "query-order", List.of(orderTools)
+                ))
+                .build();
+    }
+
+    @Bean
+    public ReactAgent mainAgent(ChatModel chatModel, SkillsAgentHook skillsAgentHook) {
         return ReactAgent.builder()
                 .name("milktea_main_agent")
                 .model(chatModel)
                 .instruction(MAIN_INSTRUCTION)
-                .tools(orderTools)
+                .hooks(List.of(skillsAgentHook))
                 .outputKey("order_result")
                 .saver(new MemorySaver())
                 .maxIterations(10)
