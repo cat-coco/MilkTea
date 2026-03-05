@@ -7,6 +7,8 @@ import com.milktea.agent.memory.MemoryEntry;
 import com.milktea.agent.memory.MemoryManager;
 import com.milktea.agent.prompt.PromptManager;
 import com.milktea.agent.rag.RagManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.SystemMessage;
 import org.springframework.ai.chat.messages.UserMessage;
@@ -25,6 +27,8 @@ import java.util.*;
 @RestController
 @RequestMapping("/api/chat")
 public class ChatController {
+
+    private static final Logger log = LoggerFactory.getLogger(ChatController.class);
 
     private final ReactAgent mainAgent;
     private final ChatModel chatModel;
@@ -71,15 +75,15 @@ public class ChatController {
         List<MemoryEntry> memories = memoryManager.searchSessionMemories(sessionId, userMessage);
 
         // 4. Execute via ReactAgent with SkillsAgentHook (progressive disclosure)
-        //    The SkillsAgentHook automatically:
-        //    - Injects skill list (name + description only) into system prompt
-        //    - Provides read_skill tool for on-demand full SKILL.md loading
-        //    - Activates grouped tools only after the related skill is loaded
+        //    - OrderTools (createOrder/cancelOrder/queryOrder) 直接挂载，始终可用
+        //    - SkillsAgentHook 注入技能列表 + 提供 read_skill 工具加载详细指令
         String reply;
+        boolean usedFallback = false;
         try {
             reply = mainAgent.call(userMessage);
         } catch (Exception e) {
-            // Fallback: direct ChatModel invocation
+            log.error("ReactAgent 调用失败，降级到 ChatModel 直接对话。原因: {}", e.getMessage(), e);
+            usedFallback = true;
             reply = fallbackChat(userMessage, ragContext, memories);
         }
 
@@ -92,15 +96,16 @@ public class ChatController {
         memoryManager.rememberSession(sessionId, "last_input", userMessage, "chat");
         memoryManager.rememberSession(sessionId, "last_reply", reply, "chat");
 
-        return Map.of(
-                "sessionId", sessionId,
-                "reply", reply,
-                "historySize", contextManager.getHistorySize(contextKey),
-                "availableSkills", skillsAgentHook.listSkills(),
-                "skillCount", skillsAgentHook.getSkillCount(),
-                "agentSteps", List.of(),
-                "iterations", 0
-        );
+        Map<String, Object> result = new HashMap<>();
+        result.put("sessionId", sessionId);
+        result.put("reply", reply);
+        result.put("historySize", contextManager.getHistorySize(contextKey));
+        result.put("availableSkills", skillsAgentHook.listSkills());
+        result.put("skillCount", skillsAgentHook.getSkillCount());
+        result.put("usedFallback", usedFallback);
+        result.put("agentSteps", List.of());
+        result.put("iterations", 0);
+        return result;
     }
 
     /**

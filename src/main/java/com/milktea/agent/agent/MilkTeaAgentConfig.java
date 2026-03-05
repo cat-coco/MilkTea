@@ -7,13 +7,10 @@ import com.alibaba.cloud.ai.graph.saver.MemorySaver;
 import com.alibaba.cloud.ai.graph.skills.registry.SkillRegistry;
 import com.alibaba.cloud.ai.graph.skills.registry.classpath.ClasspathSkillRegistry;
 import org.springframework.ai.chat.model.ChatModel;
-import org.springframework.ai.tool.ToolCallback;
-import org.springframework.ai.tool.method.MethodToolCallbackProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.List;
 
 /**
  * Configures the MilkTea ReactAgent ecosystem using spring-ai-alibaba-agent-framework.
@@ -25,17 +22,27 @@ public class MilkTeaAgentConfig {
 
     private static final String MAIN_INSTRUCTION = """
             你是茶悦时光奶茶店的AI智能客服小茶，性格活泼亲切。你的职责包括：
-            1. 帮助客户点奶茶（下单）
-            2. 帮助客户取消或退订单（退单）
-            3. 帮助客户查询订单状态（查询订单）
+            1. 帮助客户点奶茶（下单） - 使用 createOrder 工具
+            2. 帮助客户取消或退订单（退单） - 使用 cancelOrder 工具
+            3. 帮助客户查询订单状态（查询订单） - 使用 queryOrder 工具
             4. 帮助客户进行文本总结和翻译
 
-            请根据可用的 Skills 技能列表来判断需要使用哪个技能。
-            当你需要使用某个技能时，先通过 read_skill 工具加载该技能的详细指令，然后按照指令执行。
+            【重要：下单流程】
+            下单时必须收集以下全部信息才能调用 createOrder 工具：
+            - 客户姓名（必填，不能跳过，必须主动询问）
+            - 手机号（必填，不能跳过，必须主动询问）
+            - 饮品名称、杯型、甜度、冰度、加料、数量
+            信息不完整时，必须先主动询问缺少的信息，绝对不能用默认值代替。
+            下单前必须总结订单内容让客户确认。
 
             【交互规则】
             1. 对话自然亲切，适当推荐饮品
-            2. 信息不完整时主动询问缺少的信息
+            2. 退单时获取订单号和原因，确认后调用 cancelOrder 工具
+            3. 查询时可通过订单号、手机号或姓名，调用 queryOrder 工具
+
+            你还有一些 Skills 技能可用（见系统提示中的技能列表）。
+            当你需要了解某个技能的详细操作手册（如完整菜单价格表等），
+            可通过 read_skill 工具加载该技能的完整说明。
             """;
 
     private static final String COUPON_INSTRUCTION = """
@@ -64,39 +71,28 @@ public class MilkTeaAgentConfig {
     }
 
     @Bean
-    public SkillsAgentHook skillsAgentHook(SkillRegistry skillRegistry, OrderTools orderTools) {
-        // Convert @Tool annotated methods to ToolCallback instances via MethodToolCallbackProvider
-        ToolCallback[] allCallbacks = MethodToolCallbackProvider.builder()
-                .toolObjects(orderTools)
-                .build()
-                .getToolCallbacks();
-
-        // Group ToolCallbacks by skill name based on tool name mapping
-        Map<String, List<ToolCallback>> toolsBySkill = new HashMap<>();
-        for (ToolCallback callback : allCallbacks) {
-            String toolName = callback.getToolDefinition().name();
-            switch (toolName) {
-                case "createOrder" -> toolsBySkill
-                        .computeIfAbsent("create-order", k -> new ArrayList<>()).add(callback);
-                case "cancelOrder" -> toolsBySkill
-                        .computeIfAbsent("cancel-order", k -> new ArrayList<>()).add(callback);
-                case "queryOrder" -> toolsBySkill
-                        .computeIfAbsent("query-order", k -> new ArrayList<>()).add(callback);
-            }
-        }
-
+    public SkillsAgentHook skillsAgentHook(SkillRegistry skillRegistry) {
+        // SkillsAgentHook 提供渐进式披露：
+        // 1. 将 skill 列表（名称+描述）注入系统提示
+        // 2. 提供 read_skill 工具，模型可按需加载完整 SKILL.md 获取详细操作指令
+        // 注意：核心订单工具直接挂载到 agent 上，不放在 groupedTools 中，
+        //       确保模型不需要先调用 read_skill 就能执行下单/退单/查询操作。
+        //       SKILL.md 提供的是增强操作指令（菜单、流程、校验规则等）。
         return SkillsAgentHook.builder()
                 .skillRegistry(skillRegistry)
-                .groupedTools(toolsBySkill)
                 .build();
     }
 
     @Bean
-    public ReactAgent mainAgent(ChatModel chatModel, SkillsAgentHook skillsAgentHook) {
+    public ReactAgent mainAgent(ChatModel chatModel, OrderTools orderTools,
+                                SkillsAgentHook skillsAgentHook) {
         return ReactAgent.builder()
                 .name("milktea_main_agent")
                 .model(chatModel)
                 .instruction(MAIN_INSTRUCTION)
+                // 核心订单工具直接挂载，确保始终可用
+                .tools(orderTools)
+                // SkillsAgentHook 提供 read_skill 工具 + 技能列表注入系统提示
                 .hooks(List.of(skillsAgentHook))
                 .outputKey("order_result")
                 .saver(new MemorySaver())
