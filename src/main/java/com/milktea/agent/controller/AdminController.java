@@ -1,12 +1,12 @@
 package com.milktea.agent.controller;
 
+import com.alibaba.cloud.ai.graph.agent.hook.skills.SkillsAgentHook;
+import com.alibaba.cloud.ai.graph.skills.registry.SkillRegistry;
 import com.milktea.agent.context.ContextManager;
 import com.milktea.agent.memory.MemoryEntry;
 import com.milktea.agent.memory.MemoryManager;
 import com.milktea.agent.prompt.PromptManager;
 import com.milktea.agent.rag.RagManager;
-import com.milktea.agent.skill.SkillDefinition;
-import com.milktea.agent.skill.SkillManager;
 import com.milktea.agent.workflow.WorkflowDefinition;
 import com.milktea.agent.workflow.WorkflowEngine;
 import com.milktea.agent.workflow.WorkflowExecutionResult;
@@ -16,6 +16,8 @@ import java.util.*;
 
 /**
  * Admin endpoints for managing Memory, Skills, Context, Workflow, Prompts, and RAG.
+ * Skills management now uses Spring AI Alibaba's SkillRegistry + SkillsAgentHook
+ * with progressive disclosure support.
  */
 @RestController
 @RequestMapping("/api/admin")
@@ -23,20 +25,23 @@ public class AdminController {
 
     private final PromptManager promptManager;
     private final ContextManager contextManager;
-    private final SkillManager skillManager;
+    private final SkillRegistry skillRegistry;
+    private final SkillsAgentHook skillsAgentHook;
     private final RagManager ragManager;
     private final MemoryManager memoryManager;
     private final WorkflowEngine workflowEngine;
 
     public AdminController(PromptManager promptManager,
                            ContextManager contextManager,
-                           SkillManager skillManager,
+                           SkillRegistry skillRegistry,
+                           SkillsAgentHook skillsAgentHook,
                            RagManager ragManager,
                            MemoryManager memoryManager,
                            WorkflowEngine workflowEngine) {
         this.promptManager = promptManager;
         this.contextManager = contextManager;
-        this.skillManager = skillManager;
+        this.skillRegistry = skillRegistry;
+        this.skillsAgentHook = skillsAgentHook;
         this.ragManager = ragManager;
         this.memoryManager = memoryManager;
         this.workflowEngine = workflowEngine;
@@ -85,34 +90,35 @@ public class AdminController {
         return Map.of("status", "ok", "message", "会话已清除: " + sessionId);
     }
 
-    // ===== Skills Management =====
+    // ===== Skills Management (via Spring AI Alibaba SkillRegistry) =====
 
     @GetMapping("/skills")
-    public List<SkillDefinition> getAllSkills() {
-        return skillManager.getAllDefinitions();
+    public Map<String, Object> getAllSkills() {
+        return Map.of(
+                "skills", skillsAgentHook.listSkills(),
+                "totalCount", skillsAgentHook.getSkillCount()
+        );
     }
 
-    @PostMapping("/skills/{id}/toggle")
-    public Map<String, String> toggleSkill(@PathVariable String id,
-                                            @RequestBody Map<String, Boolean> request) {
-        boolean enabled = request.getOrDefault("enabled", true);
-        skillManager.setEnabled(id, enabled);
+    @GetMapping("/skills/{name}")
+    public Map<String, Object> getSkill(@PathVariable String name) {
+        boolean exists = skillsAgentHook.hasSkill(name);
+        if (!exists) {
+            return Map.of("error", "技能不存在: " + name);
+        }
+        String content = skillRegistry.readSkillContent(name);
+        return Map.of(
+                "name", name,
+                "exists", true,
+                "content", content != null ? content : ""
+        );
+    }
+
+    @PostMapping("/skills/reload")
+    public Map<String, String> reloadSkills() {
+        skillRegistry.reload();
         return Map.of("status", "ok",
-                "message", "技能 " + id + " 已" + (enabled ? "启用" : "禁用"));
-    }
-
-    @PostMapping("/skills/{id}/priority")
-    public Map<String, String> setSkillPriority(@PathVariable String id,
-                                                 @RequestBody Map<String, Integer> request) {
-        int priority = request.getOrDefault("priority", 10);
-        skillManager.setPriority(id, priority);
-        return Map.of("status", "ok", "message", "技能 " + id + " 优先级已更新为 " + priority);
-    }
-
-    @DeleteMapping("/skills/{id}")
-    public Map<String, String> removeSkill(@PathVariable String id) {
-        skillManager.unregister(id);
-        return Map.of("status", "ok", "message", "技能已删除: " + id);
+                "message", "技能已重新加载，当前技能数: " + skillsAgentHook.getSkillCount());
     }
 
     // ===== Memory Management =====

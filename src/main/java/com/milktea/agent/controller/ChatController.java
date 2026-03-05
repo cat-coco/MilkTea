@@ -1,13 +1,12 @@
 package com.milktea.agent.controller;
 
 import com.alibaba.cloud.ai.graph.agent.ReactAgent;
+import com.alibaba.cloud.ai.graph.agent.hook.skills.SkillsAgentHook;
 import com.milktea.agent.context.ContextManager;
 import com.milktea.agent.memory.MemoryEntry;
 import com.milktea.agent.memory.MemoryManager;
 import com.milktea.agent.prompt.PromptManager;
 import com.milktea.agent.rag.RagManager;
-import com.milktea.agent.skill.SkillDefinition;
-import com.milktea.agent.skill.SkillManager;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.SystemMessage;
 import org.springframework.ai.chat.messages.UserMessage;
@@ -20,8 +19,8 @@ import org.springframework.web.bind.annotation.*;
 import java.util.*;
 
 /**
- * Chat endpoint using spring-ai-alibaba ReactAgent for ReAct-style tool-calling,
- * integrated with Memory, Context, Skills, and RAG modules.
+ * Chat endpoint using spring-ai-alibaba ReactAgent with SkillsAgentHook
+ * for progressive disclosure of skills, integrated with Memory, Context, and RAG modules.
  */
 @RestController
 @RequestMapping("/api/chat")
@@ -31,7 +30,7 @@ public class ChatController {
     private final ChatModel chatModel;
     private final ContextManager contextManager;
     private final MemoryManager memoryManager;
-    private final SkillManager skillManager;
+    private final SkillsAgentHook skillsAgentHook;
     private final PromptManager promptManager;
     private final RagManager ragManager;
 
@@ -39,14 +38,14 @@ public class ChatController {
                           ChatModel chatModel,
                           ContextManager contextManager,
                           MemoryManager memoryManager,
-                          SkillManager skillManager,
+                          SkillsAgentHook skillsAgentHook,
                           PromptManager promptManager,
                           RagManager ragManager) {
         this.mainAgent = mainAgent;
         this.chatModel = chatModel;
         this.contextManager = contextManager;
         this.memoryManager = memoryManager;
-        this.skillManager = skillManager;
+        this.skillsAgentHook = skillsAgentHook;
         this.promptManager = promptManager;
         this.ragManager = ragManager;
     }
@@ -65,18 +64,17 @@ public class ChatController {
         contextManager.getOrCreateContext(sessionId, tabId);
         contextManager.addUserMessage(contextKey, userMessage);
 
-        // 2. Check keyword-triggered skills
-        List<SkillDefinition> triggered = skillManager.findTriggeredSkills(userMessage);
-        List<String> triggeredSkillNames = triggered.stream()
-                .map(SkillDefinition::name).toList();
-
-        // 3. RAG knowledge retrieval
+        // 2. RAG knowledge retrieval
         String ragContext = ragManager.getRelevantContext(userMessage);
 
-        // 4. Session memory context
+        // 3. Session memory context
         List<MemoryEntry> memories = memoryManager.searchSessionMemories(sessionId, userMessage);
 
-        // 5. Execute via ReactAgent (spring-ai-alibaba-agent-framework)
+        // 4. Execute via ReactAgent with SkillsAgentHook (progressive disclosure)
+        //    The SkillsAgentHook automatically:
+        //    - Injects skill list (name + description only) into system prompt
+        //    - Provides read_skill tool for on-demand full SKILL.md loading
+        //    - Activates grouped tools only after the related skill is loaded
         String reply;
         try {
             reply = mainAgent.call(userMessage);
@@ -89,22 +87,17 @@ public class ChatController {
             reply = "我没有理解您的意思，请再说一次~";
         }
 
-        // 6. Save context and memory
+        // 5. Save context and memory
         contextManager.addAssistantMessage(contextKey, reply);
         memoryManager.rememberSession(sessionId, "last_input", userMessage, "chat");
         memoryManager.rememberSession(sessionId, "last_reply", reply, "chat");
-
-        // 7. Track skill executions
-        for (SkillDefinition skill : triggered) {
-            contextManager.addSkillExecution(contextKey, skill.id(), skill.name(),
-                    "triggered", "");
-        }
 
         return Map.of(
                 "sessionId", sessionId,
                 "reply", reply,
                 "historySize", contextManager.getHistorySize(contextKey),
-                "triggeredSkills", triggeredSkillNames,
+                "availableSkills", skillsAgentHook.listSkills(),
+                "skillCount", skillsAgentHook.getSkillCount(),
                 "agentSteps", List.of(),
                 "iterations", 0
         );
