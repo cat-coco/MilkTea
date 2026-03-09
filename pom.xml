@@ -30,6 +30,12 @@
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
 
+        <!-- WebFlux (for Flux<ServerSentEvent> streaming support in MVC controllers) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-webflux</artifactId>
+        </dependency>
+
         <!-- Spring AI Alibaba Agent Framework (ReactAgent, SequentialAgent, etc.) -->
         <dependency>
             <groupId>com.alibaba.cloud.ai</groupId>
