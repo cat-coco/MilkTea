@@ -114,59 +114,83 @@
             display: flex; flex-direction: column; gap: 12px;
         }
 
-        /* Task Plan Card - rendered inside messages area */
+        /* Task Plan Card - Claude Code style */
         .task-card {
-            background: white; border: 1px solid #BBDEFB; border-radius: 12px;
-            overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.06);
-            animation: fadeIn 0.3s ease;
+            background: #1E1E1E; border-radius: 10px;
+            overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+            animation: fadeIn 0.3s ease; font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
         }
         .task-card-header {
             display: flex; align-items: center; justify-content: space-between;
             padding: 10px 14px; cursor: pointer; user-select: none;
-            background: #E3F2FD; border-bottom: 1px solid #BBDEFB;
+            background: #2D2D2D; transition: background 0.15s;
         }
-        .task-card-header:hover { background: #BBDEFB; }
+        .task-card-header:hover { background: #363636; }
         .task-card-title {
-            font-size: 13px; font-weight: 600; color: #1565C0;
+            font-size: 12px; font-weight: 600; color: #E0E0E0;
             display: flex; align-items: center; gap: 8px;
         }
+        .task-card-title .chevron {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 16px; height: 16px; transition: transform 0.2s ease;
+            color: #888; transform: rotate(90deg);
+        }
+        .task-card-title .chevron.collapsed { transform: rotate(0deg); }
         .task-badge {
-            font-size: 11px; background: var(--primary); color: white;
+            font-size: 10px; background: #3B82F6; color: white;
             padding: 2px 8px; border-radius: 10px; font-weight: 500;
+            letter-spacing: 0.3px;
         }
-        .task-toggle { font-size: 12px; color: var(--primary); transition: transform 0.2s; }
-        .task-toggle.collapsed { transform: rotate(-90deg); }
-        .task-list { padding: 8px 14px; }
-        .task-list.hidden { display: none; }
+        .task-badge.all-done { background: #22C55E; }
+        .task-progress-bar {
+            height: 2px; background: #333; overflow: hidden;
+        }
+        .task-progress-fill {
+            height: 100%; background: linear-gradient(90deg, #3B82F6, #60A5FA);
+            transition: width 0.4s ease;
+        }
+        .task-progress-fill.all-done { background: linear-gradient(90deg, #22C55E, #4ADE80); }
+        .task-list {
+            padding: 6px 0;
+            max-height: 600px; overflow-y: auto; transition: max-height 0.3s ease, opacity 0.2s ease, padding 0.3s ease;
+            opacity: 1;
+        }
+        .task-list.hidden { max-height: 0; opacity: 0; padding: 0; overflow: hidden; }
         .task-item {
-            display: flex; align-items: flex-start; gap: 8px;
-            padding: 5px 6px; border-radius: 6px; font-size: 12px;
-            line-height: 1.5; transition: background 0.2s; cursor: pointer;
+            display: flex; align-items: center; gap: 10px;
+            padding: 6px 14px; font-size: 12px;
+            line-height: 1.5; transition: background 0.15s; cursor: pointer;
+            color: #CCC; position: relative;
         }
-        .task-item:hover { background: #F5F5F5; }
+        .task-item:hover { background: #2A2A2A; }
         .task-icon {
             flex-shrink: 0; width: 18px; height: 18px;
             display: flex; align-items: center; justify-content: center;
-            font-size: 14px; margin-top: 1px;
+            font-size: 13px;
         }
-        .task-text { flex: 1; color: #424242; }
-        .task-item.done .task-text { color: #9E9E9E; text-decoration: line-through; }
-        .task-item.running { background: #E3F2FD; border-left: 3px solid var(--primary); }
-        .task-item.running .task-text { color: #1565C0; font-weight: 500; }
-        .task-status-text { font-size: 11px; color: #9E9E9E; flex-shrink: 0; }
-        .task-item.running .task-status-text { color: var(--primary); }
+        .task-icon .icon-pending { color: #555; }
+        .task-icon .icon-done { color: #22C55E; }
+        .task-text { flex: 1; }
+        .task-item.done .task-text { color: #666; text-decoration: line-through; }
+        .task-item.running { background: rgba(59,130,246,0.08); }
+        .task-item.running .task-text { color: #60A5FA; font-weight: 500; }
+        .task-status-text { font-size: 10px; color: #555; flex-shrink: 0; padding-right: 2px; }
+        .task-item.running .task-status-text { color: #60A5FA; }
+        .task-item.done .task-status-text { color: #555; }
         @keyframes spin { to { transform: rotate(360deg); } }
         .spinner {
             display: inline-block; width: 14px; height: 14px;
-            border: 2px solid #BBDEFB; border-top-color: var(--primary);
+            border: 2px solid #333; border-top-color: #60A5FA;
             border-radius: 50%; animation: spin 0.8s linear infinite;
         }
         .task-detail {
-            display: none; padding: 4px 0 4px 26px;
-            font-size: 11px; color: #757575; line-height: 1.6;
-            border-left: 2px solid #E0E0E0; margin-left: 9px;
+            max-height: 0; overflow: hidden; padding: 0 14px 0 42px;
+            font-size: 11px; color: #888; line-height: 1.6;
+            background: #1A1A1A; transition: max-height 0.25s ease, padding 0.25s ease;
         }
-        .task-detail.show { display: block; }
+        .task-detail.show { max-height: 120px; padding: 6px 14px 6px 42px; }
+        .task-list::-webkit-scrollbar { width: 4px; }
+        .task-list::-webkit-scrollbar-thumb { background: #444; border-radius: 2px; }
 
         /* Messages */
         .msg { display: flex; gap: 8px; max-width: 92%; animation: fadeIn 0.3s ease; }
@@ -339,7 +363,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
-// ==================== Task Plan (in chat area) ====================
+// ==================== Task Plan (Claude Code style) ====================
 function showTaskPanel() {
     if (taskPanelInserted) { renderTasks(); return; }
     taskPanelInserted = true;
@@ -348,13 +372,16 @@ function showTaskPanel() {
     card.className = 'task-card';
     card.id = 'taskCard';
     card.innerHTML = `
-        <div class="task-card-header" onclick="toggleTasks()">
+        <div class="task-card-header" onclick="toggleTasks(event)">
             <div class="task-card-title">
+                <span class="chevron" id="taskChevron">
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="4 2 8 6 4 10"/></svg>
+                </span>
                 <span>任务规划</span>
-                <span class="task-badge" id="taskBadge">待办 8/8</span>
+                <span class="task-badge" id="taskBadge">0/8</span>
             </div>
-            <span class="task-toggle" id="taskToggle">&#9660;</span>
         </div>
+        <div class="task-progress-bar"><div class="task-progress-fill" id="taskProgressFill" style="width:0%"></div></div>
         <div class="task-list" id="taskList"></div>
     `;
     c.appendChild(card);
@@ -362,45 +389,62 @@ function showTaskPanel() {
     c.scrollTop = c.scrollHeight;
 }
 
-function toggleTasks() {
+function toggleTasks(e) {
+    e.stopPropagation();
     taskCollapsed = !taskCollapsed;
-    document.getElementById('taskList').classList.toggle('hidden', taskCollapsed);
-    document.getElementById('taskToggle').classList.toggle('collapsed', taskCollapsed);
+    const list = document.getElementById('taskList');
+    const chevron = document.getElementById('taskChevron');
+    if (list) list.classList.toggle('hidden', taskCollapsed);
+    if (chevron) chevron.classList.toggle('collapsed', taskCollapsed);
 }
 
 function renderTasks() {
     const done = TASKS.filter(t => t.status === 'completed').length;
+    const total = TASKS.length;
+    const allDone = done === total;
+    const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+
     const badge = document.getElementById('taskBadge');
     if (!badge) return;
-    if (done === TASKS.length) {
-        badge.textContent = '全部完成！';
-        badge.style.background = '#4CAF50';
-    } else {
-        badge.textContent = `待办 ${TASKS.length - done}/${TASKS.length}`;
-        badge.style.background = '';
+    badge.textContent = allDone ? '已完成' : `${done}/${total}`;
+    badge.className = 'task-badge' + (allDone ? ' all-done' : '');
+
+    const progress = document.getElementById('taskProgressFill');
+    if (progress) {
+        progress.style.width = pct + '%';
+        progress.className = 'task-progress-fill' + (allDone ? ' all-done' : '');
     }
+
     const list = document.getElementById('taskList');
     if (!list) return;
     list.innerHTML = TASKS.map(t => {
         let icon, cls, status;
-        if (t.status === 'completed') { icon = '<span style="color:#4CAF50">&#10003;</span>'; cls = 'done'; status = '已完成'; }
-        else if (t.status === 'active') { icon = '<span class="spinner"></span>'; cls = 'running'; status = '执行中...'; }
-        else { icon = '<span style="color:#BDBDBD">&#9675;</span>'; cls = ''; status = '待执行'; }
+        if (t.status === 'completed') {
+            icon = '<span class="icon-done"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" fill="#22C55E"/><path d="M5 8l2 2 4-4" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>';
+            cls = 'done'; status = '已完成';
+        } else if (t.status === 'active') {
+            icon = '<span class="spinner"></span>';
+            cls = 'running'; status = '执行中...';
+        } else {
+            icon = '<span class="icon-pending"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="#555" stroke-width="1.5"/></svg></span>';
+            cls = ''; status = '';
+        }
+        const detailShow = t.detail && t.status === 'completed' ? 'show' : '';
         return `
-            <div class="task-item ${cls}" onclick="toggleDetail('${t.id}')">
+            <div class="task-item ${cls}" onclick="toggleDetail('${t.id}', event)">
                 <div class="task-icon">${icon}</div>
                 <div class="task-text">${esc(t.text)}</div>
                 <div class="task-status-text">${status}</div>
             </div>
-            <div class="task-detail ${t.detail && t.status === 'completed' ? 'show' : ''}" id="td-${t.id}">${esc(t.detail)}</div>
+            <div class="task-detail ${detailShow}" id="td-${t.id}">${esc(t.detail)}</div>
         `;
     }).join('');
-    // Scroll to bottom after update
     const c = document.getElementById('messages');
     c.scrollTop = c.scrollHeight;
 }
 
-function toggleDetail(id) {
+function toggleDetail(id, e) {
+    e.stopPropagation();
     const el = document.getElementById('td-' + id);
     if (el) el.classList.toggle('show');
 }
