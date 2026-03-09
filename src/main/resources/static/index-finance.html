@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Financial Report Volatility Analysis - AI Intelligent Assistant</title>
+    <style>
+        :root {
+            --primary: #1976D2;
+            --primary-light: #BBDEFB;
+            --primary-dark: #0D47A1;
+            --bg-light: #F5F7FA;
+            --bg-white: #FFFFFF;
+            --text-dark: #333333;
+            --text-muted: #757575;
+            --border: #E0E0E0;
+            --success: #4CAF50;
+            --danger: #C62828;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-light);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* ========== Header ========== */
+        .app-header {
+            background: linear-gradient(135deg, #1565C0, #0D47A1);
+            color: white;
+            padding: 10px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            flex-shrink: 0;
+            z-index: 10;
+        }
+        .app-header .logo { display: flex; align-items: center; gap: 12px; }
+        .app-header .logo-icon {
+            width: 36px; height: 36px; border-radius: 8px;
+            background: rgba(255,255,255,0.2); display: flex; align-items: center;
+            justify-content: center; font-size: 18px;
+        }
+        .app-header h1 { font-size: 16px; font-weight: 600; }
+        .app-header .subtitle { font-size: 11px; opacity: 0.8; }
+
+        /* ========== Main Layout ========== */
+        .main-container {
+            display: flex; flex: 1; overflow: hidden;
+        }
+
+        /* ========== Left: Excel Area ========== */
+        .excel-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: var(--bg-white);
+            border-right: 1px solid var(--border);
+            overflow: hidden;
+        }
+        .excel-toolbar {
+            background: #E3F2FD;
+            padding: 6px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 12px;
+            color: #1565C0;
+            flex-shrink: 0;
+            border-bottom: 1px solid #BBDEFB;
+        }
+        .excel-toolbar .toolbar-label { font-weight: 600; }
+        .excel-tab-bar {
+            display: flex;
+            background: #ECEFF1;
+            border-bottom: 2px solid var(--primary);
+            flex-shrink: 0;
+            overflow-x: auto;
+            padding: 0 4px;
+            min-height: 34px;
+        }
+        .excel-tab {
+            padding: 7px 16px;
+            font-size: 12px;
+            cursor: pointer;
+            border: 1px solid transparent;
+            border-bottom: none;
+            background: transparent;
+            color: #546E7A;
+            white-space: nowrap;
+            margin-top: 4px;
+            border-radius: 6px 6px 0 0;
+            transition: all 0.2s;
+        }
+        .excel-tab:hover { background: rgba(25, 118, 210, 0.08); }
+        .excel-tab.active {
+            background: white;
+            color: #1565C0;
+            font-weight: 600;
+            border-color: #BBDEFB;
+        }
+        .excel-content {
+            flex: 1;
+            overflow: auto;
+            background: white;
+        }
+        .excel-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+        .excel-table th {
+            background: #E3F2FD;
+            color: #1565C0;
+            font-weight: 600;
+            padding: 10px 14px;
+            border: 1px solid #BBDEFB;
+            white-space: nowrap;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+        .excel-table td {
+            padding: 8px 14px;
+            border: 1px solid #E0E0E0;
+            white-space: nowrap;
+        }
+        .excel-table tr:nth-child(even) { background: #FAFAFA; }
+        .excel-table tr:hover { background: #E3F2FD; }
+        .excel-table td.cell-red { background: #FFEBEE; color: #C62828; font-weight: 600; }
+        .excel-table td.cell-green { background: #E8F5E9; color: #2E7D32; }
+        .excel-placeholder {
+            display: flex; flex-direction: column; align-items: center;
+            justify-content: center; height: 100%; color: #90A4AE; gap: 16px;
+        }
+        .excel-placeholder .ph-icon { font-size: 64px; opacity: 0.3; }
+        .excel-placeholder .ph-text { font-size: 14px; }
+        .excel-placeholder .ph-hint { font-size: 12px; color: #B0BEC5; }
+
+        /* ========== Right: Chat Panel ========== */
+        .chat-panel {
+            width: 440px;
+            display: flex;
+            flex-direction: column;
+            background: #F8FAFC;
+            flex-shrink: 0;
+        }
+
+        /* Task Planning */
+        .task-panel {
+            background: white;
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+            max-height: 320px;
+            overflow-y: auto;
+            display: none;
+        }
+        .task-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 10px 16px;
+            cursor: pointer;
+            user-select: none;
+            background: #E3F2FD;
+            border-bottom: 1px solid #BBDEFB;
+        }
+        .task-header:hover { background: #BBDEFB; }
+        .task-title {
+            font-size: 13px; font-weight: 600; color: #1565C0;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .task-badge {
+            font-size: 11px; background: var(--primary); color: white;
+            padding: 2px 8px; border-radius: 10px; font-weight: 500;
+        }
+        .task-toggle {
+            font-size: 12px; color: var(--primary); transition: transform 0.2s;
+        }
+        .task-toggle.collapsed { transform: rotate(-90deg); }
+        .task-list { padding: 8px 16px; }
+        .task-list.hidden { display: none; }
+        .task-item {
+            display: flex; align-items: flex-start; gap: 8px;
+            padding: 6px 8px; border-radius: 6px; font-size: 12px;
+            line-height: 1.5; transition: background 0.2s; cursor: pointer;
+        }
+        .task-item:hover { background: #F5F5F5; }
+        .task-icon { flex-shrink: 0; width: 18px; height: 18px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 14px; margin-top: 1px; }
+        .task-text { flex: 1; color: #424242; }
+        .task-item.done .task-text { color: #9E9E9E; text-decoration: line-through; }
+        .task-item.running { background: #E3F2FD; border-left: 3px solid var(--primary); }
+        .task-item.running .task-text { color: #1565C0; font-weight: 500; }
+        .task-status-text { font-size: 11px; color: #9E9E9E; flex-shrink: 0; }
+        .task-item.running .task-status-text { color: var(--primary); }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .spinner {
+            display: inline-block; width: 14px; height: 14px;
+            border: 2px solid #BBDEFB; border-top-color: var(--primary);
+            border-radius: 50%; animation: spin 0.8s linear infinite;
+        }
+        .task-detail {
+            display: none; padding: 4px 0 4px 26px;
+            font-size: 11px; color: #757575; line-height: 1.6;
+            border-left: 2px solid #E0E0E0; margin-left: 9px;
+        }
+        .task-detail.show { display: block; }
+
+        /* Quick Actions */
+        .quick-actions {
+            padding: 10px 16px; display: flex; gap: 6px; flex-wrap: wrap;
+            border-bottom: 1px solid var(--border); flex-shrink: 0; background: white;
+        }
+        .quick-btn {
+            padding: 5px 14px; border-radius: 14px; background: #E3F2FD;
+            border: 1px solid #90CAF9; color: #1565C0; font-size: 12px;
+            cursor: pointer; transition: all 0.2s; white-space: nowrap;
+        }
+        .quick-btn:hover { background: var(--primary); color: white; border-color: var(--primary); }
+
+        /* Messages */
+        .messages {
+            flex: 1; overflow-y: auto; padding: 16px;
+            display: flex; flex-direction: column; gap: 12px;
+        }
+        .msg {
+            display: flex; gap: 8px; max-width: 92%;
+            animation: fadeIn 0.3s ease;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .msg.user { align-self: flex-end; flex-direction: row-reverse; }
+        .msg-avatar {
+            width: 30px; height: 30px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0; font-size: 13px;
+        }
+        .msg.bot .msg-avatar { background: #BBDEFB; color: #1565C0; }
+        .msg.user .msg-avatar { background: var(--primary); color: white; }
+        .msg-bubble {
+            padding: 10px 14px; border-radius: 14px; font-size: 13px;
+            line-height: 1.6; word-break: break-word; white-space: pre-wrap;
+        }
+        .msg.bot .msg-bubble {
+            background: white; color: var(--text-dark);
+            border-bottom-left-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+        }
+        .msg.user .msg-bubble {
+            background: var(--primary); color: white; border-bottom-right-radius: 4px;
+        }
+        .typing .msg-bubble { display: flex; gap: 4px; align-items: center; padding: 14px 18px; }
+        .dot {
+            width: 7px; height: 7px; border-radius: 50%; background: var(--primary);
+            animation: bounce 1.4s infinite ease-in-out;
+        }
+        .dot:nth-child(1) { animation-delay: 0s; }
+        .dot:nth-child(2) { animation-delay: 0.2s; }
+        .dot:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes bounce {
+            0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+            40% { transform: scale(1); opacity: 1; }
+        }
+
+        /* Input Area */
+        .input-area {
+            padding: 12px 16px; background: white;
+            border-top: 1px solid var(--border); flex-shrink: 0;
+        }
+        .input-row { display: flex; gap: 8px; align-items: flex-end; }
+        .chat-input {
+            flex: 1; border: 2px solid var(--primary-light); border-radius: 18px;
+            padding: 8px 14px; font-size: 13px; outline: none; resize: none;
+            max-height: 80px; min-height: 36px; font-family: inherit;
+            transition: border-color 0.2s;
+        }
+        .chat-input:focus { border-color: var(--primary); }
+        .send-btn {
+            width: 36px; height: 36px; border-radius: 50%;
+            background: var(--primary); color: white; border: none;
+            cursor: pointer; display: flex; align-items: center;
+            justify-content: center; font-size: 16px; flex-shrink: 0;
+            transition: all 0.2s;
+        }
+        .send-btn:hover { background: var(--primary-dark); }
+        .send-btn:disabled { background: #ccc; cursor: not-allowed; }
+        .input-toolbar {
+            display: flex; gap: 8px; margin-top: 6px;
+        }
+        .input-toolbar button {
+            background: none; border: none; color: #999; cursor: pointer;
+            font-size: 11px; padding: 2px 6px;
+        }
+        .input-toolbar button:hover { color: var(--primary); }
+
+        /* Scrollbar */
+        .messages::-webkit-scrollbar,
+        .excel-content::-webkit-scrollbar,
+        .task-panel::-webkit-scrollbar { width: 6px; }
+        .messages::-webkit-scrollbar-thumb,
+        .excel-content::-webkit-scrollbar-thumb,
+        .task-panel::-webkit-scrollbar-thumb { background: #BDBDBD; border-radius: 3px; }
+
+        @media (max-width: 768px) {
+            .chat-panel { width: 100%; }
+            .excel-area { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="app-header">
+    <div class="logo">
+        <div class="logo-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 3h18v18H3z"/><path d="M3 9h18"/><path d="M3 15h18"/><path d="M9 3v18"/><path d="M15 3v18"/>
+            </svg>
+        </div>
+        <div>
+            <h1>Financial Report Volatility Analysis</h1>
+            <div class="subtitle">AI Intelligent Assistant - Spring AI Alibaba Graph Agent</div>
+        </div>
+    </div>
+</div>
+
+<div class="main-container">
+    <!-- Left: Excel Area -->
+    <div class="excel-area">
+        <div class="excel-toolbar">
+            <span class="toolbar-label">Online Data Worksheet</span>
+            <span style="opacity:0.6">|</span>
+            <span>Financial Report Volatility Analysis Workspace</span>
+        </div>
+        <div class="excel-tab-bar" id="excelTabBar"></div>
+        <div class="excel-content" id="excelContent">
+            <div class="excel-placeholder">
+                <div class="ph-icon">
+                    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#B0BEC5" stroke-width="1">
+                        <path d="M3 3h18v18H3z"/><path d="M3 9h18"/><path d="M3 15h18"/><path d="M9 3v18"/><path d="M15 3v18"/>
+                    </svg>
+                </div>
+                <div class="ph-text">Online Data Worksheet</div>
+                <div class="ph-hint">Start a conversation on the right to trigger the workflow. Analysis data will be automatically displayed here.</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right: Chat Panel -->
+    <div class="chat-panel">
+        <!-- Task Planning -->
+        <div class="task-panel" id="taskPanel">
+            <div class="task-header" id="taskHeader">
+                <div class="task-title">
+                    <span>Task Plan</span>
+                    <span class="task-badge" id="taskBadge">Pending 0/8</span>
+                </div>
+                <span class="task-toggle" id="taskToggle">&#9660;</span>
+            </div>
+            <div class="task-list" id="taskList"></div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="quick-actions">
+            <button class="quick-btn" onclick="sendQuick('Please help me analyze the cash flow report for volatility reasonability')">Cash Flow Analysis</button>
+            <button class="quick-btn" onclick="sendQuick('Please help me check the balance sheet volatility')">Balance Sheet Check</button>
+            <button class="quick-btn" onclick="sendQuick('Show all report items with volatility exceeding 20%')">Anomaly Screening</button>
+        </div>
+
+        <!-- Messages -->
+        <div class="messages" id="messages"></div>
+
+        <!-- Input -->
+        <div class="input-area">
+            <div class="input-row">
+                <textarea class="chat-input" id="chatInput" placeholder="Enter message, e.g.: Please help me analyze the cash flow report..." rows="1"></textarea>
+                <button class="send-btn" id="sendBtn" onclick="sendMessage()">&#10148;</button>
+            </div>
+            <div class="input-toolbar">
+                <button onclick="clearChat()">Clear</button>
+                <button onclick="newSession()">+ New Session</button>
+                <span style="margin-left:auto;color:#ccc;font-size:11px" id="sessionInfo"></span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const API = '';
+let sessionId = null;
+let isLoading = false;
+let taskCollapsed = false;
+
+// Task definitions
+const TASKS = [
+    { id: 'step1', text: 'Step 1: Retrieve EFM report data and calculate volatility', status: 'pending', detail: '' },
+    { id: 'step2', text: 'Step 2: Retrieve DCF010102 detail data', status: 'pending', detail: '' },
+    { id: 'step3_1', text: 'Step 3.1: Retrieve equity info and mark 8 tiers', status: 'pending', detail: '' },
+    { id: 'step3_2', text: 'Step 3.2: Associate detail data and mark tiers', status: 'pending', detail: '' },
+    { id: 'step3_3', text: 'Step 3.3: Update SR6 data IC tier', status: 'pending', detail: '' },
+    { id: 'step3_4', text: 'Step 3.4: Filter and create processed data', status: 'pending', detail: '' },
+    { id: 'step4', text: 'Step 4: Verify detail data reasonability', status: 'pending', detail: '' },
+    { id: 'step5', text: 'Step 5: Aggregate by simplified scenario and analyze volatility', status: 'pending', detail: '' }
+];
+
+// Excel sheets data
+let sheets = [];
+let activeSheet = 0;
+
+// ==================== Init ====================
+document.addEventListener('DOMContentLoaded', () => {
+    loadWelcome();
+    document.getElementById('taskHeader').addEventListener('click', toggleTasks);
+    document.getElementById('chatInput').addEventListener('keydown', e => {
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+    });
+    document.getElementById('chatInput').addEventListener('input', function() {
+        this.style.height = 'auto';
+        this.style.height = Math.min(this.scrollHeight, 80) + 'px';
+    });
+});
+
+// ==================== Task Plan ====================
+function showTaskPanel() {
+    document.getElementById('taskPanel').style.display = 'block';
+    renderTasks();
+}
+
+function toggleTasks() {
+    taskCollapsed = !taskCollapsed;
+    document.getElementById('taskList').classList.toggle('hidden', taskCollapsed);
+    document.getElementById('taskToggle').classList.toggle('collapsed', taskCollapsed);
+}
+
+function renderTasks() {
+    const done = TASKS.filter(t => t.status === 'completed').length;
+    const badge = document.getElementById('taskBadge');
+    if (done === TASKS.length) {
+        badge.textContent = 'All Complete!';
+        badge.style.background = '#4CAF50';
+    } else {
+        badge.textContent = `Pending ${TASKS.length - done}/${TASKS.length}`;
+        badge.style.background = '';
+    }
+    document.getElementById('taskList').innerHTML = TASKS.map(t => {
+        let icon, cls, status;
+        if (t.status === 'completed') { icon = '<span style="color:#4CAF50">&#10003;</span>'; cls = 'done'; status = 'Done'; }
+        else if (t.status === 'active') { icon = '<span class="spinner"></span>'; cls = 'running'; status = 'Executing...'; }
+        else { icon = '<span style="color:#BDBDBD">&#9675;</span>'; cls = ''; status = 'Pending'; }
+        return `
+            <div class="task-item ${cls}" onclick="toggleDetail('${t.id}')">
+                <div class="task-icon">${icon}</div>
+                <div class="task-text">${esc(t.text)}</div>
+                <div class="task-status-text">${status}</div>
+            </div>
+            <div class="task-detail ${t.detail && t.status === 'completed' ? 'show' : ''}" id="td-${t.id}">${esc(t.detail)}</div>
+        `;
+    }).join('');
+}
+
+function toggleDetail(id) {
+    const el = document.getElementById('td-' + id);
+    if (el) el.classList.toggle('show');
+}
+
+function updateTask(id, status, detail) {
+    const t = TASKS.find(x => x.id === id);
+    if (t) { t.status = status; if (detail) t.detail = detail; renderTasks(); }
+}
+
+// ==================== Excel ====================
+function addSheet(name, headers, rows) {
+    sheets.push({ name, headers, rows });
+    activeSheet = sheets.length - 1;
+    renderTabs();
+    renderSheet();
+}
+
+function updateSheet(index, headers, rows, append) {
+    if (index < 0 || index >= sheets.length) return;
+    const s = sheets[index];
+    if (append) {
+        const newH = headers.filter(h => !s.headers.includes(h));
+        s.headers = s.headers.concat(newH);
+        s.rows = s.rows.map((r, i) => {
+            const nr = { ...r };
+            newH.forEach(h => { nr[h] = rows[i] ? rows[i][h] || '' : ''; });
+            return nr;
+        });
+    } else {
+        s.headers = headers; s.rows = rows;
+    }
+    if (activeSheet === index) renderSheet();
+}
+
+function renderTabs() {
+    document.getElementById('excelTabBar').innerHTML = sheets.map((s, i) =>
+        `<div class="excel-tab ${i === activeSheet ? 'active' : ''}" onclick="switchTab(${i})">${esc(s.name)}</div>`
+    ).join('');
+}
+
+function switchTab(i) { activeSheet = i; renderTabs(); renderSheet(); }
+
+function renderSheet() {
+    const el = document.getElementById('excelContent');
+    if (!sheets.length) {
+        el.innerHTML = '<div class="excel-placeholder"><div class="ph-icon"><svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#B0BEC5" stroke-width="1"><path d="M3 3h18v18H3z"/><path d="M3 9h18"/><path d="M3 15h18"/><path d="M9 3v18"/><path d="M15 3v18"/></svg></div><div class="ph-text">Online Data Worksheet</div><div class="ph-hint">Start a conversation on the right to trigger the workflow</div></div>';
+        return;
+    }
+    const s = sheets[activeSheet];
+    let h = '<table class="excel-table"><thead><tr>' + s.headers.map(x => `<th>${esc(x)}</th>`).join('') + '</tr></thead><tbody>';
+    s.rows.forEach(row => {
+        h += '<tr>';
+        s.headers.forEach(hd => {
+            const v = row[hd] !== undefined ? String(row[hd]) : '';
+            let cls = '';
+            if (hd === 'Is Volatility > 20%' && v === 'Yes') cls = 'cell-red';
+            if (hd === 'Is Volatility > 20%' && v === 'No') cls = 'cell-green';
+            h += `<td class="${cls}">${esc(v)}</td>`;
+        });
+        h += '</tr>';
+    });
+    h += '</tbody></table>';
+    el.innerHTML = h;
+}
+
+// ==================== Chat ====================
+function addMsg(type, text) {
+    const c = document.getElementById('messages');
+    const d = document.createElement('div');
+    d.className = `msg ${type}`;
+    const av = type === 'bot' ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3h18v18H3z"/><path d="M3 9h18"/><path d="M9 3v18"/></svg>' : '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-7 8-7s8 3 8 7"/></svg>';
+    d.innerHTML = `<div class="msg-avatar">${av}</div><div class="msg-bubble">${esc(text)}</div>`;
+    c.appendChild(d);
+    c.scrollTop = c.scrollHeight;
+}
+
+function showTyping() {
+    const c = document.getElementById('messages');
+    const d = document.createElement('div');
+    d.className = 'msg bot typing'; d.id = 'typing';
+    d.innerHTML = '<div class="msg-avatar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3h18v18H3z"/><path d="M3 9h18"/><path d="M9 3v18"/></svg></div><div class="msg-bubble"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>';
+    c.appendChild(d); c.scrollTop = c.scrollHeight;
+}
+function hideTyping() { const e = document.getElementById('typing'); if (e) e.remove(); }
+
+function esc(t) { const d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
+
+async function loadWelcome() {
+    try {
+        const r = await fetch(`${API}/api/finance/welcome`);
+        const d = await r.json();
+        addMsg('bot', d.message);
+    } catch {
+        addMsg('bot', 'Welcome! I am the Financial Report Volatility Analysis Intelligent Assistant. I can help you analyze the reasonability of report item volatility. Please tell me which report you would like to analyze.');
+    }
+}
+
+function sendQuick(text) {
+    document.getElementById('chatInput').value = text;
+    sendMessage();
+}
+
+async function sendMessage() {
+    const input = document.getElementById('chatInput');
+    const text = input.value.trim();
+    if (!text || isLoading) return;
+    addMsg('user', text);
+    input.value = ''; input.style.height = 'auto';
+    isLoading = true;
+    document.getElementById('sendBtn').disabled = true;
+    showTyping();
+    try {
+        const r = await fetch(`${API}/api/finance/send`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sessionId, message: text })
+        });
+        const d = await r.json();
+        sessionId = d.sessionId;
+        document.getElementById('sessionInfo').textContent = `Session: ${sessionId.substring(0, 8)}...`;
+        hideTyping();
+        addMsg('bot', d.reply);
+        if (d.workflowActive) showTaskPanel();
+        handleResponse(d);
+        if (d.nextStep) { await delay(500); await execStep(d.nextStep); }
+    } catch {
+        hideTyping();
+        addMsg('bot', 'Connection failed. Please ensure backend is running on localhost:9000.');
+    } finally {
+        isLoading = false;
+        document.getElementById('sendBtn').disabled = false;
+    }
+}
+
+function handleResponse(d) {
+    if (d.taskUpdates) d.taskUpdates.forEach(u => updateTask(u.taskId, u.status, u.detail));
+    if (d.excelOperations) d.excelOperations.forEach(op => {
+        if (op.action === 'addSheet') addSheet(op.sheetName, op.headers, op.rows);
+        else if (op.action === 'updateSheet') updateSheet(op.sheetIndex, op.headers, op.rows, op.append);
+    });
+}
+
+async function execStep(stepId) {
+    isLoading = true;
+    showTyping();
+    try {
+        const r = await fetch(`${API}/api/finance/execute-step`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sessionId, stepId })
+        });
+        const d = await r.json();
+        hideTyping();
+        if (d.reply) addMsg('bot', d.reply);
+        handleResponse(d);
+        if (d.nextStep) { await delay(800); await execStep(d.nextStep); }
+    } catch {
+        hideTyping();
+        addMsg('bot', 'Workflow step execution error.');
+    } finally { isLoading = false; }
+}
+
+function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+async function clearChat() {
+    if (sessionId) {
+        try { await fetch(`${API}/api/finance/clear`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sessionId }) }); } catch {}
+    }
+    document.getElementById('messages').innerHTML = '';
+    TASKS.forEach(t => { t.status = 'pending'; t.detail = ''; });
+    document.getElementById('taskPanel').style.display = 'none';
+    sheets = []; activeSheet = 0;
+    renderSheet(); document.getElementById('excelTabBar').innerHTML = '';
+    loadWelcome();
+}
+
+function newSession() { sessionId = null; clearChat(); document.getElementById('sessionInfo').textContent = ''; }
+</script>
+</body>
+</html>
