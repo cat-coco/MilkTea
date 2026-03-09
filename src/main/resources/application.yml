@@ -27,3 +27,11 @@ spring:
   web:
     resources:
       static-locations: classpath:/static/
+
+# Frontend extension version configuration
+# Switch between 'v1' (frontend-extension, MilkTea theme) and 'v2' (frontend-extensionV2, Finance blue theme)
+# v1: Original MilkTea order agent frontend (brown theme)
+# v2: Financial report volatility analysis frontend (blue theme)
+app:
+  frontend:
+    version: v2
