@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Financial Report Volatility Analysis - AI Intelligent Assistant</title>
+    <title>财报波动合理性分析 - AI智能助手</title>
     <style>
         :root {
             --primary: #1976D2;
@@ -49,86 +49,36 @@
         .app-header .subtitle { font-size: 11px; opacity: 0.8; }
 
         /* ========== Main Layout ========== */
-        .main-container {
-            display: flex; flex: 1; overflow: hidden;
-        }
+        .main-container { display: flex; flex: 1; overflow: hidden; }
 
         /* ========== Left: Excel Area ========== */
         .excel-area {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            background: var(--bg-white);
-            border-right: 1px solid var(--border);
-            overflow: hidden;
+            flex: 1; display: flex; flex-direction: column;
+            background: var(--bg-white); border-right: 1px solid var(--border); overflow: hidden;
         }
         .excel-toolbar {
-            background: #E3F2FD;
-            padding: 6px 16px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            font-size: 12px;
-            color: #1565C0;
-            flex-shrink: 0;
-            border-bottom: 1px solid #BBDEFB;
+            background: #E3F2FD; padding: 6px 16px; display: flex; align-items: center;
+            gap: 12px; font-size: 12px; color: #1565C0; flex-shrink: 0; border-bottom: 1px solid #BBDEFB;
         }
         .excel-toolbar .toolbar-label { font-weight: 600; }
         .excel-tab-bar {
-            display: flex;
-            background: #ECEFF1;
-            border-bottom: 2px solid var(--primary);
-            flex-shrink: 0;
-            overflow-x: auto;
-            padding: 0 4px;
-            min-height: 34px;
+            display: flex; background: #ECEFF1; border-bottom: 2px solid var(--primary);
+            flex-shrink: 0; overflow-x: auto; padding: 0 4px; min-height: 34px;
         }
         .excel-tab {
-            padding: 7px 16px;
-            font-size: 12px;
-            cursor: pointer;
-            border: 1px solid transparent;
-            border-bottom: none;
-            background: transparent;
-            color: #546E7A;
-            white-space: nowrap;
-            margin-top: 4px;
-            border-radius: 6px 6px 0 0;
-            transition: all 0.2s;
+            padding: 7px 16px; font-size: 12px; cursor: pointer; border: 1px solid transparent;
+            border-bottom: none; background: transparent; color: #546E7A; white-space: nowrap;
+            margin-top: 4px; border-radius: 6px 6px 0 0; transition: all 0.2s;
         }
         .excel-tab:hover { background: rgba(25, 118, 210, 0.08); }
-        .excel-tab.active {
-            background: white;
-            color: #1565C0;
-            font-weight: 600;
-            border-color: #BBDEFB;
-        }
-        .excel-content {
-            flex: 1;
-            overflow: auto;
-            background: white;
-        }
-        .excel-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 12px;
-        }
+        .excel-tab.active { background: white; color: #1565C0; font-weight: 600; border-color: #BBDEFB; }
+        .excel-content { flex: 1; overflow: auto; background: white; }
+        .excel-table { width: 100%; border-collapse: collapse; font-size: 12px; }
         .excel-table th {
-            background: #E3F2FD;
-            color: #1565C0;
-            font-weight: 600;
-            padding: 10px 14px;
-            border: 1px solid #BBDEFB;
-            white-space: nowrap;
-            position: sticky;
-            top: 0;
-            z-index: 1;
+            background: #E3F2FD; color: #1565C0; font-weight: 600; padding: 10px 14px;
+            border: 1px solid #BBDEFB; white-space: nowrap; position: sticky; top: 0; z-index: 1;
         }
-        .excel-table td {
-            padding: 8px 14px;
-            border: 1px solid #E0E0E0;
-            white-space: nowrap;
-        }
+        .excel-table td { padding: 8px 14px; border: 1px solid #E0E0E0; white-space: nowrap; }
         .excel-table tr:nth-child(even) { background: #FAFAFA; }
         .excel-table tr:hover { background: #E3F2FD; }
         .excel-table td.cell-red { background: #FFEBEE; color: #C62828; font-weight: 600; }
@@ -143,32 +93,40 @@
 
         /* ========== Right: Chat Panel ========== */
         .chat-panel {
-            width: 440px;
-            display: flex;
-            flex-direction: column;
-            background: #F8FAFC;
-            flex-shrink: 0;
+            width: 440px; display: flex; flex-direction: column; background: #F8FAFC; flex-shrink: 0;
         }
 
-        /* Task Planning */
-        .task-panel {
-            background: white;
-            border-bottom: 1px solid var(--border);
-            flex-shrink: 0;
-            max-height: 320px;
-            overflow-y: auto;
-            display: none;
+        /* Quick Actions - fixed at top */
+        .quick-actions {
+            padding: 10px 16px; display: flex; gap: 6px; flex-wrap: wrap;
+            border-bottom: 1px solid var(--border); flex-shrink: 0; background: white;
         }
-        .task-header {
+        .quick-btn {
+            padding: 5px 14px; border-radius: 14px; background: #E3F2FD;
+            border: 1px solid #90CAF9; color: #1565C0; font-size: 12px;
+            cursor: pointer; transition: all 0.2s; white-space: nowrap;
+        }
+        .quick-btn:hover { background: var(--primary); color: white; border-color: var(--primary); }
+
+        /* Messages */
+        .messages {
+            flex: 1; overflow-y: auto; padding: 16px;
+            display: flex; flex-direction: column; gap: 12px;
+        }
+
+        /* Task Plan Card - rendered inside messages area */
+        .task-card {
+            background: white; border: 1px solid #BBDEFB; border-radius: 12px;
+            overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+            animation: fadeIn 0.3s ease;
+        }
+        .task-card-header {
             display: flex; align-items: center; justify-content: space-between;
-            padding: 10px 16px;
-            cursor: pointer;
-            user-select: none;
-            background: #E3F2FD;
-            border-bottom: 1px solid #BBDEFB;
+            padding: 10px 14px; cursor: pointer; user-select: none;
+            background: #E3F2FD; border-bottom: 1px solid #BBDEFB;
         }
-        .task-header:hover { background: #BBDEFB; }
-        .task-title {
+        .task-card-header:hover { background: #BBDEFB; }
+        .task-card-title {
             font-size: 13px; font-weight: 600; color: #1565C0;
             display: flex; align-items: center; gap: 8px;
         }
@@ -176,21 +134,21 @@
             font-size: 11px; background: var(--primary); color: white;
             padding: 2px 8px; border-radius: 10px; font-weight: 500;
         }
-        .task-toggle {
-            font-size: 12px; color: var(--primary); transition: transform 0.2s;
-        }
+        .task-toggle { font-size: 12px; color: var(--primary); transition: transform 0.2s; }
         .task-toggle.collapsed { transform: rotate(-90deg); }
-        .task-list { padding: 8px 16px; }
+        .task-list { padding: 8px 14px; }
         .task-list.hidden { display: none; }
         .task-item {
             display: flex; align-items: flex-start; gap: 8px;
-            padding: 6px 8px; border-radius: 6px; font-size: 12px;
+            padding: 5px 6px; border-radius: 6px; font-size: 12px;
             line-height: 1.5; transition: background 0.2s; cursor: pointer;
         }
         .task-item:hover { background: #F5F5F5; }
-        .task-icon { flex-shrink: 0; width: 18px; height: 18px;
+        .task-icon {
+            flex-shrink: 0; width: 18px; height: 18px;
             display: flex; align-items: center; justify-content: center;
-            font-size: 14px; margin-top: 1px; }
+            font-size: 14px; margin-top: 1px;
+        }
         .task-text { flex: 1; color: #424242; }
         .task-item.done .task-text { color: #9E9E9E; text-decoration: line-through; }
         .task-item.running { background: #E3F2FD; border-left: 3px solid var(--primary); }
@@ -210,27 +168,8 @@
         }
         .task-detail.show { display: block; }
 
-        /* Quick Actions */
-        .quick-actions {
-            padding: 10px 16px; display: flex; gap: 6px; flex-wrap: wrap;
-            border-bottom: 1px solid var(--border); flex-shrink: 0; background: white;
-        }
-        .quick-btn {
-            padding: 5px 14px; border-radius: 14px; background: #E3F2FD;
-            border: 1px solid #90CAF9; color: #1565C0; font-size: 12px;
-            cursor: pointer; transition: all 0.2s; white-space: nowrap;
-        }
-        .quick-btn:hover { background: var(--primary); color: white; border-color: var(--primary); }
-
         /* Messages */
-        .messages {
-            flex: 1; overflow-y: auto; padding: 16px;
-            display: flex; flex-direction: column; gap: 12px;
-        }
-        .msg {
-            display: flex; gap: 8px; max-width: 92%;
-            animation: fadeIn 0.3s ease;
-        }
+        .msg { display: flex; gap: 8px; max-width: 92%; animation: fadeIn 0.3s ease; }
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(6px); }
             to { opacity: 1; transform: translateY(0); }
@@ -251,9 +190,7 @@
             background: white; color: var(--text-dark);
             border-bottom-left-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.06);
         }
-        .msg.user .msg-bubble {
-            background: var(--primary); color: white; border-bottom-right-radius: 4px;
-        }
+        .msg.user .msg-bubble { background: var(--primary); color: white; border-bottom-right-radius: 4px; }
         .typing .msg-bubble { display: flex; gap: 4px; align-items: center; padding: 14px 18px; }
         .dot {
             width: 7px; height: 7px; border-radius: 50%; background: var(--primary);
@@ -269,42 +206,31 @@
 
         /* Input Area */
         .input-area {
-            padding: 12px 16px; background: white;
-            border-top: 1px solid var(--border); flex-shrink: 0;
+            padding: 12px 16px; background: white; border-top: 1px solid var(--border); flex-shrink: 0;
         }
         .input-row { display: flex; gap: 8px; align-items: flex-end; }
         .chat-input {
             flex: 1; border: 2px solid var(--primary-light); border-radius: 18px;
             padding: 8px 14px; font-size: 13px; outline: none; resize: none;
-            max-height: 80px; min-height: 36px; font-family: inherit;
-            transition: border-color 0.2s;
+            max-height: 80px; min-height: 36px; font-family: inherit; transition: border-color 0.2s;
         }
         .chat-input:focus { border-color: var(--primary); }
         .send-btn {
-            width: 36px; height: 36px; border-radius: 50%;
-            background: var(--primary); color: white; border: none;
-            cursor: pointer; display: flex; align-items: center;
-            justify-content: center; font-size: 16px; flex-shrink: 0;
-            transition: all 0.2s;
+            width: 36px; height: 36px; border-radius: 50%; background: var(--primary); color: white;
+            border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;
+            font-size: 16px; flex-shrink: 0; transition: all 0.2s;
         }
         .send-btn:hover { background: var(--primary-dark); }
         .send-btn:disabled { background: #ccc; cursor: not-allowed; }
-        .input-toolbar {
-            display: flex; gap: 8px; margin-top: 6px;
-        }
+        .input-toolbar { display: flex; gap: 8px; margin-top: 6px; }
         .input-toolbar button {
-            background: none; border: none; color: #999; cursor: pointer;
-            font-size: 11px; padding: 2px 6px;
+            background: none; border: none; color: #999; cursor: pointer; font-size: 11px; padding: 2px 6px;
         }
         .input-toolbar button:hover { color: var(--primary); }
 
         /* Scrollbar */
-        .messages::-webkit-scrollbar,
-        .excel-content::-webkit-scrollbar,
-        .task-panel::-webkit-scrollbar { width: 6px; }
-        .messages::-webkit-scrollbar-thumb,
-        .excel-content::-webkit-scrollbar-thumb,
-        .task-panel::-webkit-scrollbar-thumb { background: #BDBDBD; border-radius: 3px; }
+        .messages::-webkit-scrollbar, .excel-content::-webkit-scrollbar { width: 6px; }
+        .messages::-webkit-scrollbar-thumb, .excel-content::-webkit-scrollbar-thumb { background: #BDBDBD; border-radius: 3px; }
 
         @media (max-width: 768px) {
             .chat-panel { width: 100%; }
@@ -323,8 +249,8 @@
             </svg>
         </div>
         <div>
-            <h1>Financial Report Volatility Analysis</h1>
-            <div class="subtitle">AI Intelligent Assistant - Spring AI Alibaba Graph Agent</div>
+            <h1>财报波动合理性分析</h1>
+            <div class="subtitle">AI智能助手 - Spring AI Alibaba Graph Agent</div>
         </div>
     </div>
 </div>
@@ -333,9 +259,9 @@
     <!-- Left: Excel Area -->
     <div class="excel-area">
         <div class="excel-toolbar">
-            <span class="toolbar-label">Online Data Worksheet</span>
+            <span class="toolbar-label">在线数据工作表</span>
             <span style="opacity:0.6">|</span>
-            <span>Financial Report Volatility Analysis Workspace</span>
+            <span>财报波动分析工作区</span>
         </div>
         <div class="excel-tab-bar" id="excelTabBar"></div>
         <div class="excel-content" id="excelContent">
@@ -345,45 +271,33 @@
                         <path d="M3 3h18v18H3z"/><path d="M3 9h18"/><path d="M3 15h18"/><path d="M9 3v18"/><path d="M15 3v18"/>
                     </svg>
                 </div>
-                <div class="ph-text">Online Data Worksheet</div>
-                <div class="ph-hint">Start a conversation on the right to trigger the workflow. Analysis data will be automatically displayed here.</div>
+                <div class="ph-text">在线数据工作表</div>
+                <div class="ph-hint">在右侧发起对话触发工作流，分析数据将自动展示在此处</div>
             </div>
         </div>
     </div>
 
     <!-- Right: Chat Panel -->
     <div class="chat-panel">
-        <!-- Task Planning -->
-        <div class="task-panel" id="taskPanel">
-            <div class="task-header" id="taskHeader">
-                <div class="task-title">
-                    <span>Task Plan</span>
-                    <span class="task-badge" id="taskBadge">Pending 0/8</span>
-                </div>
-                <span class="task-toggle" id="taskToggle">&#9660;</span>
-            </div>
-            <div class="task-list" id="taskList"></div>
-        </div>
-
-        <!-- Quick Actions -->
+        <!-- Quick Actions - fixed at top -->
         <div class="quick-actions">
-            <button class="quick-btn" onclick="sendQuick('Please help me analyze the cash flow report for volatility reasonability')">Cash Flow Analysis</button>
-            <button class="quick-btn" onclick="sendQuick('Please help me check the balance sheet volatility')">Balance Sheet Check</button>
-            <button class="quick-btn" onclick="sendQuick('Show all report items with volatility exceeding 20%')">Anomaly Screening</button>
+            <button class="quick-btn" onclick="sendQuick('请帮我对现金流报表进行波动合理性分析')">现金流分析</button>
+            <button class="quick-btn" onclick="sendQuick('请帮我检查资产负债表的波动情况')">资产负债表检查</button>
+            <button class="quick-btn" onclick="sendQuick('显示所有波动超过20%的报表项')">异常筛查</button>
         </div>
 
-        <!-- Messages -->
+        <!-- Messages (task plan will be inserted here as a card) -->
         <div class="messages" id="messages"></div>
 
         <!-- Input -->
         <div class="input-area">
             <div class="input-row">
-                <textarea class="chat-input" id="chatInput" placeholder="Enter message, e.g.: Please help me analyze the cash flow report..." rows="1"></textarea>
+                <textarea class="chat-input" id="chatInput" placeholder="请输入消息，例如：请帮我对现金流报表进行波动合理性分析..." rows="1"></textarea>
                 <button class="send-btn" id="sendBtn" onclick="sendMessage()">&#10148;</button>
             </div>
             <div class="input-toolbar">
-                <button onclick="clearChat()">Clear</button>
-                <button onclick="newSession()">+ New Session</button>
+                <button onclick="clearChat()">清空对话</button>
+                <button onclick="newSession()">+ 新会话</button>
                 <span style="margin-left:auto;color:#ccc;font-size:11px" id="sessionInfo"></span>
             </div>
         </div>
@@ -395,17 +309,18 @@ const API = '';
 let sessionId = null;
 let isLoading = false;
 let taskCollapsed = false;
+let taskPanelInserted = false;
 
 // Task definitions
 const TASKS = [
-    { id: 'step1', text: 'Step 1: Retrieve EFM report data and calculate volatility', status: 'pending', detail: '' },
-    { id: 'step2', text: 'Step 2: Retrieve DCF010102 detail data', status: 'pending', detail: '' },
-    { id: 'step3_1', text: 'Step 3.1: Retrieve equity info and mark 8 tiers', status: 'pending', detail: '' },
-    { id: 'step3_2', text: 'Step 3.2: Associate detail data and mark tiers', status: 'pending', detail: '' },
-    { id: 'step3_3', text: 'Step 3.3: Update SR6 data IC tier', status: 'pending', detail: '' },
-    { id: 'step3_4', text: 'Step 3.4: Filter and create processed data', status: 'pending', detail: '' },
-    { id: 'step4', text: 'Step 4: Verify detail data reasonability', status: 'pending', detail: '' },
-    { id: 'step5', text: 'Step 5: Aggregate by simplified scenario and analyze volatility', status: 'pending', detail: '' }
+    { id: 'step1', text: '第一步：获取EFM报表数据并计算波动值', status: 'pending', detail: '' },
+    { id: 'step2', text: '第二步：获取DCF010102明细数据', status: 'pending', detail: '' },
+    { id: 'step3_1', text: '第三步-3.1：获取股权信息并标注8大分层', status: 'pending', detail: '' },
+    { id: 'step3_2', text: '第三步-3.2：关联明细数据标注层级', status: 'pending', detail: '' },
+    { id: 'step3_3', text: '第三步-3.3：更新SR6数据的IC层级', status: 'pending', detail: '' },
+    { id: 'step3_4', text: '第三步-3.4：过滤并创建处理后数据', status: 'pending', detail: '' },
+    { id: 'step4', text: '第四步：校验明细数据合理性', status: 'pending', detail: '' },
+    { id: 'step5', text: '第五步：按简化场景汇聚并分析波动', status: 'pending', detail: '' }
 ];
 
 // Excel sheets data
@@ -415,7 +330,6 @@ let activeSheet = 0;
 // ==================== Init ====================
 document.addEventListener('DOMContentLoaded', () => {
     loadWelcome();
-    document.getElementById('taskHeader').addEventListener('click', toggleTasks);
     document.getElementById('chatInput').addEventListener('keydown', e => {
         if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
     });
@@ -425,10 +339,27 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
-// ==================== Task Plan ====================
+// ==================== Task Plan (in chat area) ====================
 function showTaskPanel() {
-    document.getElementById('taskPanel').style.display = 'block';
+    if (taskPanelInserted) { renderTasks(); return; }
+    taskPanelInserted = true;
+    const c = document.getElementById('messages');
+    const card = document.createElement('div');
+    card.className = 'task-card';
+    card.id = 'taskCard';
+    card.innerHTML = `
+        <div class="task-card-header" onclick="toggleTasks()">
+            <div class="task-card-title">
+                <span>任务规划</span>
+                <span class="task-badge" id="taskBadge">待办 8/8</span>
+            </div>
+            <span class="task-toggle" id="taskToggle">&#9660;</span>
+        </div>
+        <div class="task-list" id="taskList"></div>
+    `;
+    c.appendChild(card);
     renderTasks();
+    c.scrollTop = c.scrollHeight;
 }
 
 function toggleTasks() {
@@ -440,18 +371,21 @@ function toggleTasks() {
 function renderTasks() {
     const done = TASKS.filter(t => t.status === 'completed').length;
     const badge = document.getElementById('taskBadge');
+    if (!badge) return;
     if (done === TASKS.length) {
-        badge.textContent = 'All Complete!';
+        badge.textContent = '全部完成！';
         badge.style.background = '#4CAF50';
     } else {
-        badge.textContent = `Pending ${TASKS.length - done}/${TASKS.length}`;
+        badge.textContent = `待办 ${TASKS.length - done}/${TASKS.length}`;
         badge.style.background = '';
     }
-    document.getElementById('taskList').innerHTML = TASKS.map(t => {
+    const list = document.getElementById('taskList');
+    if (!list) return;
+    list.innerHTML = TASKS.map(t => {
         let icon, cls, status;
-        if (t.status === 'completed') { icon = '<span style="color:#4CAF50">&#10003;</span>'; cls = 'done'; status = 'Done'; }
-        else if (t.status === 'active') { icon = '<span class="spinner"></span>'; cls = 'running'; status = 'Executing...'; }
-        else { icon = '<span style="color:#BDBDBD">&#9675;</span>'; cls = ''; status = 'Pending'; }
+        if (t.status === 'completed') { icon = '<span style="color:#4CAF50">&#10003;</span>'; cls = 'done'; status = '已完成'; }
+        else if (t.status === 'active') { icon = '<span class="spinner"></span>'; cls = 'running'; status = '执行中...'; }
+        else { icon = '<span style="color:#BDBDBD">&#9675;</span>'; cls = ''; status = '待执行'; }
         return `
             <div class="task-item ${cls}" onclick="toggleDetail('${t.id}')">
                 <div class="task-icon">${icon}</div>
@@ -461,6 +395,9 @@ function renderTasks() {
             <div class="task-detail ${t.detail && t.status === 'completed' ? 'show' : ''}" id="td-${t.id}">${esc(t.detail)}</div>
         `;
     }).join('');
+    // Scroll to bottom after update
+    const c = document.getElementById('messages');
+    c.scrollTop = c.scrollHeight;
 }
 
 function toggleDetail(id) {
@@ -477,8 +414,7 @@ function updateTask(id, status, detail) {
 function addSheet(name, headers, rows) {
     sheets.push({ name, headers, rows });
     activeSheet = sheets.length - 1;
-    renderTabs();
-    renderSheet();
+    renderTabs(); renderSheet();
 }
 
 function updateSheet(index, headers, rows, append) {
@@ -492,9 +428,7 @@ function updateSheet(index, headers, rows, append) {
             newH.forEach(h => { nr[h] = rows[i] ? rows[i][h] || '' : ''; });
             return nr;
         });
-    } else {
-        s.headers = headers; s.rows = rows;
-    }
+    } else { s.headers = headers; s.rows = rows; }
     if (activeSheet === index) renderSheet();
 }
 
@@ -509,7 +443,7 @@ function switchTab(i) { activeSheet = i; renderTabs(); renderSheet(); }
 function renderSheet() {
     const el = document.getElementById('excelContent');
     if (!sheets.length) {
-        el.innerHTML = '<div class="excel-placeholder"><div class="ph-icon"><svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#B0BEC5" stroke-width="1"><path d="M3 3h18v18H3z"/><path d="M3 9h18"/><path d="M3 15h18"/><path d="M9 3v18"/><path d="M15 3v18"/></svg></div><div class="ph-text">Online Data Worksheet</div><div class="ph-hint">Start a conversation on the right to trigger the workflow</div></div>';
+        el.innerHTML = '<div class="excel-placeholder"><div class="ph-icon"><svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#B0BEC5" stroke-width="1"><path d="M3 3h18v18H3z"/><path d="M3 9h18"/><path d="M3 15h18"/><path d="M9 3v18"/><path d="M15 3v18"/></svg></div><div class="ph-text">在线数据工作表</div><div class="ph-hint">在右侧发起对话触发工作流</div></div>';
         return;
     }
     const s = sheets[activeSheet];
@@ -519,8 +453,8 @@ function renderSheet() {
         s.headers.forEach(hd => {
             const v = row[hd] !== undefined ? String(row[hd]) : '';
             let cls = '';
-            if (hd === 'Is Volatility > 20%' && v === 'Yes') cls = 'cell-red';
-            if (hd === 'Is Volatility > 20%' && v === 'No') cls = 'cell-green';
+            if (hd === '是否波动超20%' && v === '是') cls = 'cell-red';
+            if (hd === '是否波动超20%' && v === '否') cls = 'cell-green';
             h += `<td class="${cls}">${esc(v)}</td>`;
         });
         h += '</tr>';
@@ -557,7 +491,7 @@ async function loadWelcome() {
         const d = await r.json();
         addMsg('bot', d.message);
     } catch {
-        addMsg('bot', 'Welcome! I am the Financial Report Volatility Analysis Intelligent Assistant. I can help you analyze the reasonability of report item volatility. Please tell me which report you would like to analyze.');
+        addMsg('bot', '您好！我是财报波动合理性分析智能助手。我可以帮您分析报表项波动的合理性，包括现金流量表、资产负债表等。请告诉我您想分析哪份报表？');
     }
 }
 
@@ -583,7 +517,7 @@ async function sendMessage() {
         });
         const d = await r.json();
         sessionId = d.sessionId;
-        document.getElementById('sessionInfo').textContent = `Session: ${sessionId.substring(0, 8)}...`;
+        document.getElementById('sessionInfo').textContent = `会话: ${sessionId.substring(0, 8)}...`;
         hideTyping();
         addMsg('bot', d.reply);
         if (d.workflowActive) showTaskPanel();
@@ -591,7 +525,7 @@ async function sendMessage() {
         if (d.nextStep) { await delay(500); await execStep(d.nextStep); }
     } catch {
         hideTyping();
-        addMsg('bot', 'Connection failed. Please ensure backend is running on localhost:9000.');
+        addMsg('bot', '连接失败，请确认后端服务已在 localhost:9000 启动。');
     } finally {
         isLoading = false;
         document.getElementById('sendBtn').disabled = false;
@@ -622,7 +556,7 @@ async function execStep(stepId) {
         if (d.nextStep) { await delay(800); await execStep(d.nextStep); }
     } catch {
         hideTyping();
-        addMsg('bot', 'Workflow step execution error.');
+        addMsg('bot', '工作流步骤执行出错，请重试。');
     } finally { isLoading = false; }
 }
 
@@ -634,7 +568,7 @@ async function clearChat() {
     }
     document.getElementById('messages').innerHTML = '';
     TASKS.forEach(t => { t.status = 'pending'; t.detail = ''; });
-    document.getElementById('taskPanel').style.display = 'none';
+    taskPanelInserted = false;
     sheets = []; activeSheet = 0;
     renderSheet(); document.getElementById('excelTabBar').innerHTML = '';
     loadWelcome();
