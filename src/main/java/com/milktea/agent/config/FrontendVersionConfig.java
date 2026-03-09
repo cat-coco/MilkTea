@@ -32,8 +32,8 @@ public class FrontendVersionConfig {
         return Map.of(
                 "version", frontendVersion,
                 "description", "v1".equals(frontendVersion)
-                        ? "MilkTea Order Agent (frontend-extension)"
-                        : "Financial Report Analysis (frontend-extensionV2)"
+                        ? "奶茶点单智能客服 (frontend-extension)"
+                        : "财报波动合理性分析 (frontend-extensionV2)"
         );
     }
 
