@@ -18,6 +18,8 @@ import org.springframework.http.MediaType;
 import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -109,7 +111,8 @@ public class ChatController {
 
     /**
      * Streaming chat endpoint using Server-Sent Events.
-     * Returns Flux<ServerSentEvent> for reactive streaming directly from the LLM.
+     * Uses mainAgent.call() first (preserving skill capabilities like order/query/cancel).
+     * Falls back to chatModel.stream() for true token-by-token streaming when agent fails.
      */
     @PostMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<ServerSentEvent<String>> streamChat(@RequestBody ChatRequest request) {
@@ -126,25 +129,10 @@ public class ChatController {
         contextManager.getOrCreateContext(sessionId, tabId);
         contextManager.addUserMessage(contextKey, userMessage);
 
-        // Build enriched prompt with RAG + memory
+        // Build enriched prompt for fallback path
         String ragContext = ragManager.getRelevantContext(userMessage);
         List<MemoryEntry> memories = memoryManager.searchSessionMemories(sessionId, userMessage);
 
-        StringBuilder systemPrompt = new StringBuilder(promptManager.getPrompt("system"));
-        if (ragContext != null && !ragContext.isBlank()) {
-            systemPrompt.append("\n\n【参考知识库信息】\n").append(ragContext);
-        }
-        if (!memories.isEmpty()) {
-            systemPrompt.append("\n\n【对话记忆】\n");
-            memories.forEach(m -> systemPrompt.append("- ")
-                    .append(m.key()).append(": ").append(m.value()).append("\n"));
-        }
-
-        List<Message> messages = new ArrayList<>();
-        messages.add(new SystemMessage(systemPrompt.toString()));
-        messages.add(new UserMessage(userMessage));
-
-        // Accumulate full reply for context saving
         StringBuilder fullReply = new StringBuilder();
 
         return Flux.concat(
@@ -154,23 +142,32 @@ public class ChatController {
                         .data("{\"sessionId\":\"" + sessionId + "\"}")
                         .build()),
 
-                // 2. Stream LLM tokens (filter out <think> reasoning content)
-                chatModel.stream(new Prompt(messages))
-                        .mapNotNull(resp -> resp.getResult() != null
-                                ? resp.getResult().getOutput().getText() : null)
-                        .filter(content -> !content.isEmpty())
-                        .transform(this::filterThinkingTokens)
+                // 2. Try mainAgent first (with skills), fall back to chatModel.stream()
+                Mono.fromCallable(() -> mainAgent.call(userMessage))
+                        .subscribeOn(Schedulers.boundedElastic())
+                        .filter(reply -> reply != null && !reply.isBlank())
+                        .flux()
                         .doOnNext(fullReply::append)
-                        .map(content -> ServerSentEvent.<String>builder()
+                        .map(reply -> ServerSentEvent.<String>builder()
                                 .event("token")
-                                .data(content)
+                                .data(reply)
                                 .build())
-                        .onErrorResume(e -> Flux.just(ServerSentEvent.<String>builder()
-                                .event("error")
-                                .data("生成回复时出错，请重试")
-                                .build())),
+                        .onErrorResume(e -> {
+                            // Agent failed, fall back to chatModel streaming
+                            List<Message> messages = buildMessages(userMessage, ragContext, memories);
+                            return chatModel.stream(new Prompt(messages))
+                                    .mapNotNull(resp -> resp.getResult() != null
+                                            ? resp.getResult().getOutput().getText() : null)
+                                    .filter(content -> !content.isEmpty())
+                                    .transform(this::filterThinkingTokens)
+                                    .doOnNext(fullReply::append)
+                                    .map(content -> ServerSentEvent.<String>builder()
+                                            .event("token")
+                                            .data(content)
+                                            .build());
+                        }),
 
-                // 3. Save context & send done (deferred until token stream completes)
+                // 3. Save context & send done
                 Flux.defer(() -> {
                     String reply = fullReply.toString();
                     if (reply.isBlank()) reply = "我没有理解您的意思，请再说一次~";
@@ -183,6 +180,26 @@ public class ChatController {
                             .build());
                 })
         );
+    }
+
+    /**
+     * Build enriched message list with system prompt, RAG context, and memory.
+     */
+    private List<Message> buildMessages(String userMessage, String ragContext,
+                                         List<MemoryEntry> memories) {
+        StringBuilder systemPrompt = new StringBuilder(promptManager.getPrompt("system"));
+        if (ragContext != null && !ragContext.isBlank()) {
+            systemPrompt.append("\n\n【参考知识库信息】\n").append(ragContext);
+        }
+        if (!memories.isEmpty()) {
+            systemPrompt.append("\n\n【对话记忆】\n");
+            memories.forEach(m -> systemPrompt.append("- ")
+                    .append(m.key()).append(": ").append(m.value()).append("\n"));
+        }
+        List<Message> messages = new ArrayList<>();
+        messages.add(new SystemMessage(systemPrompt.toString()));
+        messages.add(new UserMessage(userMessage));
+        return messages;
     }
 
     /**
@@ -230,18 +247,7 @@ public class ChatController {
     private String fallbackChat(String userMessage, String ragContext,
                                  List<MemoryEntry> memories) {
         try {
-            StringBuilder systemPrompt = new StringBuilder(promptManager.getPrompt("system"));
-            if (ragContext != null && !ragContext.isBlank()) {
-                systemPrompt.append("\n\n【参考知识库信息】\n").append(ragContext);
-            }
-            if (!memories.isEmpty()) {
-                systemPrompt.append("\n\n【对话记忆】\n");
-                memories.forEach(m -> systemPrompt.append("- ")
-                        .append(m.key()).append(": ").append(m.value()).append("\n"));
-            }
-            List<Message> messages = new ArrayList<>();
-            messages.add(new SystemMessage(systemPrompt.toString()));
-            messages.add(new UserMessage(userMessage));
+            List<Message> messages = buildMessages(userMessage, ragContext, memories);
             ChatResponse response = chatModel.call(new Prompt(messages));
             return response.getResult().getOutput().getContent();
         } catch (Exception e) {
