@@ -518,6 +518,31 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
+function createStreamingMessage() {
+    const container = document.getElementById('chatMessages');
+    const div = document.createElement('div');
+    div.className = 'message bot';
+    div.innerHTML = `
+        <div class="avatar">🧋</div>
+        <div>
+            <div class="bubble"></div>
+        </div>
+    `;
+    container.appendChild(div);
+    const bubble = div.querySelector('.bubble');
+    return {
+        element: div,
+        bubble: bubble,
+        append(text) {
+            bubble.textContent += text;
+            container.scrollTop = container.scrollHeight;
+        },
+        getText() {
+            return bubble.textContent;
+        }
+    };
+}
+
 async function sendMessage() {
     const input = document.getElementById('chatInput');
     const text = input.value.trim();
@@ -531,17 +556,55 @@ async function sendMessage() {
     showTyping();
 
     try {
-        const res = await fetch(`${API_BASE}/api/chat/send`, {
+        const res = await fetch(`${API_BASE}/api/chat/stream`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ sessionId, tabId, message: text })
         });
-        const data = await res.json();
-        sessionId = data.sessionId;
-        document.getElementById('sessionInfo').textContent =
-            `会话: ${sessionId.substring(0, 8)}... | Tab: ${tabId.substring(0, 8)}...`;
+
         hideTyping();
-        appendMessage('bot', data.reply, data.triggeredSkills);
+        const streamMsg = createStreamingMessage();
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop(); // keep incomplete line in buffer
+
+            let eventName = '';
+            for (const line of lines) {
+                if (line.startsWith('event:')) {
+                    eventName = line.substring(6).trim();
+                } else if (line.startsWith('data:')) {
+                    const data = line.substring(5);
+                    if (eventName === 'meta') {
+                        try {
+                            const meta = JSON.parse(data);
+                            sessionId = meta.sessionId;
+                            document.getElementById('sessionInfo').textContent =
+                                `会话: ${sessionId.substring(0, 8)}... | Tab: ${tabId.substring(0, 8)}...`;
+                        } catch (e) { /* ignore */ }
+                    } else if (eventName === 'token') {
+                        streamMsg.append(data);
+                    } else if (eventName === 'error') {
+                        if (!streamMsg.getText()) {
+                            streamMsg.append(data);
+                        }
+                    }
+                    eventName = '';
+                }
+            }
+        }
+
+        // If nothing was streamed, show a fallback
+        if (!streamMsg.getText()) {
+            streamMsg.append('我没有理解您的意思，请再说一次~');
+        }
     } catch (e) {
         hideTyping();
         appendMessage('bot', '抱歉，网络出了点问题，请稍后重试~');

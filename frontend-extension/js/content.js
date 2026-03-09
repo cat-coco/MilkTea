@@ -120,6 +120,27 @@
         container.scrollTop = container.scrollHeight;
     }
 
+    function createStreamingMessage() {
+        const container = document.getElementById('copilot-messages');
+        const div = document.createElement('div');
+        div.className = 'copilot-msg bot';
+        div.innerHTML = `
+            <div class="msg-avatar">🧋</div>
+            <div class="msg-bubble"></div>
+        `;
+        container.appendChild(div);
+        const bubble = div.querySelector('.msg-bubble');
+        return {
+            append(text) {
+                bubble.textContent += text;
+                container.scrollTop = container.scrollHeight;
+            },
+            getText() {
+                return bubble.textContent;
+            }
+        };
+    }
+
     function showTyping() {
         const container = document.getElementById('copilot-messages');
         const div = document.createElement('div');
@@ -171,15 +192,52 @@
         showTyping();
 
         try {
-            const res = await fetch(`${API_BASE}/api/chat/send`, {
+            const res = await fetch(`${API_BASE}/api/chat/stream`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ sessionId, message: text })
             });
-            const data = await res.json();
-            sessionId = data.sessionId;
+
             hideTyping();
-            appendMessage('bot', data.reply);
+            const streamMsg = createStreamingMessage();
+            const reader = res.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n');
+                buffer = lines.pop();
+
+                let eventName = '';
+                for (const line of lines) {
+                    if (line.startsWith('event:')) {
+                        eventName = line.substring(6).trim();
+                    } else if (line.startsWith('data:')) {
+                        const data = line.substring(5);
+                        if (eventName === 'meta') {
+                            try {
+                                const meta = JSON.parse(data);
+                                sessionId = meta.sessionId;
+                            } catch (e) { /* ignore */ }
+                        } else if (eventName === 'token') {
+                            streamMsg.append(data);
+                        } else if (eventName === 'error') {
+                            if (!streamMsg.getText()) {
+                                streamMsg.append(data);
+                            }
+                        }
+                        eventName = '';
+                    }
+                }
+            }
+
+            if (!streamMsg.getText()) {
+                streamMsg.append('我没有理解您的意思，请再说一次~');
+            }
         } catch {
             hideTyping();
             appendMessage('bot', '抱歉，连接服务器失败，请确保后端服务运行在 localhost:9000');
