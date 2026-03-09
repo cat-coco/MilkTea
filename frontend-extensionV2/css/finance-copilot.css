@@ -1,0 +1,536 @@
+/* ============================================================
+   Financial Report Analysis Copilot - Blue Theme
+   ============================================================ */
+
+/* Copilot Floating Button */
+#finance-copilot-btn {
+    position: fixed;
+    right: 20px;
+    bottom: 20px;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #1976D2, #0D47A1);
+    color: white;
+    border: none;
+    cursor: pointer;
+    font-size: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 16px rgba(25, 118, 210, 0.4);
+    z-index: 2147483646;
+    transition: all 0.3s ease;
+}
+#finance-copilot-btn:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 20px rgba(25, 118, 210, 0.6);
+}
+
+/* Main Layout Container */
+#finance-copilot-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 2147483647;
+    display: none;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+#finance-copilot-container.open {
+    display: flex;
+}
+
+/* Left Main Content Area (Excel) */
+#finance-main-area {
+    flex: 1;
+    background: #F5F7FA;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* Main Area Header */
+.finance-main-header {
+    background: linear-gradient(135deg, #1565C0, #0D47A1);
+    color: white;
+    padding: 10px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+}
+.finance-main-header .header-title {
+    font-size: 15px;
+    font-weight: 600;
+}
+
+/* Excel Tab Bar */
+.excel-tab-bar {
+    display: flex;
+    background: #E3F2FD;
+    border-bottom: 2px solid #1976D2;
+    flex-shrink: 0;
+    overflow-x: auto;
+    padding: 0 4px;
+}
+.excel-tab {
+    padding: 8px 16px;
+    font-size: 12px;
+    cursor: pointer;
+    border: 1px solid transparent;
+    border-bottom: none;
+    background: transparent;
+    color: #546E7A;
+    white-space: nowrap;
+    margin-top: 4px;
+    border-radius: 6px 6px 0 0;
+    transition: all 0.2s;
+}
+.excel-tab:hover {
+    background: rgba(25, 118, 210, 0.08);
+}
+.excel-tab.active {
+    background: white;
+    color: #1565C0;
+    font-weight: 600;
+    border-color: #BBDEFB;
+}
+
+/* Excel Content Area */
+.excel-content {
+    flex: 1;
+    overflow: auto;
+    padding: 0;
+    background: white;
+}
+.excel-table-wrapper {
+    overflow: auto;
+    height: 100%;
+}
+.excel-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+}
+.excel-table th {
+    background: #E3F2FD;
+    color: #1565C0;
+    font-weight: 600;
+    padding: 8px 12px;
+    border: 1px solid #BBDEFB;
+    white-space: nowrap;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+.excel-table td {
+    padding: 6px 12px;
+    border: 1px solid #E0E0E0;
+    white-space: nowrap;
+}
+.excel-table tr:nth-child(even) {
+    background: #FAFAFA;
+}
+.excel-table tr:hover {
+    background: #E3F2FD;
+}
+.excel-table td.highlight-red {
+    background: #FFEBEE;
+    color: #C62828;
+    font-weight: 600;
+}
+.excel-table td.highlight-green {
+    background: #E8F5E9;
+    color: #2E7D32;
+}
+
+/* Empty Excel Placeholder */
+.excel-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: #90A4AE;
+    gap: 12px;
+}
+.excel-placeholder .icon {
+    font-size: 48px;
+    opacity: 0.5;
+}
+.excel-placeholder .text {
+    font-size: 14px;
+}
+
+/* Right Chat Panel */
+#finance-chat-panel {
+    width: 420px;
+    background: #F8FAFC;
+    display: flex;
+    flex-direction: column;
+    border-left: 1px solid #E0E0E0;
+    flex-shrink: 0;
+}
+
+/* Chat Panel Header */
+.finance-chat-header {
+    background: linear-gradient(135deg, #1976D2, #0D47A1);
+    color: white;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+}
+.finance-chat-header .header-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.finance-chat-header .logo-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+}
+.finance-chat-header .header-title {
+    font-size: 15px;
+    font-weight: 600;
+}
+.finance-chat-header .header-subtitle {
+    font-size: 11px;
+    opacity: 0.8;
+}
+.finance-chat-header .close-btn {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 22px;
+    cursor: pointer;
+    opacity: 0.8;
+    padding: 4px;
+    line-height: 1;
+}
+.finance-chat-header .close-btn:hover { opacity: 1; }
+
+/* Task Planning Panel */
+.task-planning-panel {
+    background: white;
+    border-bottom: 1px solid #E0E0E0;
+    flex-shrink: 0;
+    max-height: 320px;
+    overflow-y: auto;
+}
+.task-planning-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    cursor: pointer;
+    user-select: none;
+    background: #E3F2FD;
+    border-bottom: 1px solid #BBDEFB;
+}
+.task-planning-header:hover {
+    background: #BBDEFB;
+}
+.task-planning-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #1565C0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.task-planning-toggle {
+    font-size: 12px;
+    color: #1976D2;
+    transition: transform 0.2s;
+}
+.task-planning-toggle.collapsed {
+    transform: rotate(-90deg);
+}
+.task-planning-list {
+    padding: 8px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.task-planning-list.hidden {
+    display: none;
+}
+.task-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: 6px;
+    font-size: 12px;
+    line-height: 1.5;
+    transition: background 0.2s;
+}
+.task-item:hover {
+    background: #F5F5F5;
+}
+.task-item .task-icon {
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    margin-top: 1px;
+}
+.task-item .task-text {
+    flex: 1;
+    color: #424242;
+}
+.task-item.completed .task-text {
+    color: #9E9E9E;
+    text-decoration: line-through;
+}
+.task-item.active {
+    background: #E3F2FD;
+    border-left: 3px solid #1976D2;
+}
+.task-item.active .task-text {
+    color: #1565C0;
+    font-weight: 500;
+}
+.task-item .task-status {
+    font-size: 11px;
+    color: #9E9E9E;
+    flex-shrink: 0;
+}
+.task-item.active .task-status {
+    color: #1976D2;
+}
+
+/* Task Detail - Expandable Sub-step Details */
+.task-detail-toggle {
+    cursor: pointer;
+}
+.task-detail-content {
+    display: none;
+    padding: 4px 0 4px 26px;
+    font-size: 11px;
+    color: #757575;
+    line-height: 1.6;
+    border-left: 2px solid #E0E0E0;
+    margin-left: 9px;
+}
+.task-detail-content.visible {
+    display: block;
+}
+
+/* Chat Messages */
+.finance-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.finance-msg {
+    display: flex;
+    gap: 8px;
+    max-width: 92%;
+    animation: financeFadeIn 0.3s ease;
+}
+@keyframes financeFadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.finance-msg.user {
+    align-self: flex-end;
+    flex-direction: row-reverse;
+}
+.finance-msg .msg-avatar {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 13px;
+}
+.finance-msg.bot .msg-avatar { background: #BBDEFB; color: #1565C0; }
+.finance-msg.user .msg-avatar { background: #1976D2; color: white; }
+.finance-msg .msg-bubble {
+    padding: 10px 14px;
+    border-radius: 14px;
+    font-size: 13px;
+    line-height: 1.6;
+    word-break: break-word;
+    white-space: pre-wrap;
+}
+.finance-msg.bot .msg-bubble {
+    background: white;
+    color: #333;
+    border-bottom-left-radius: 4px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+.finance-msg.user .msg-bubble {
+    background: #1976D2;
+    color: white;
+    border-bottom-right-radius: 4px;
+}
+
+/* Typing Indicator */
+.finance-typing .msg-bubble {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    padding: 14px 18px;
+}
+.finance-typing-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #1976D2;
+    animation: financeBounce 1.4s infinite ease-in-out;
+}
+.finance-typing-dot:nth-child(1) { animation-delay: 0s; }
+.finance-typing-dot:nth-child(2) { animation-delay: 0.2s; }
+.finance-typing-dot:nth-child(3) { animation-delay: 0.4s; }
+@keyframes financeBounce {
+    0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+    40% { transform: scale(1); opacity: 1; }
+}
+
+/* Input Area */
+.finance-input-area {
+    padding: 12px 16px;
+    background: white;
+    border-top: 1px solid #E0E0E0;
+    flex-shrink: 0;
+}
+.finance-input-wrapper {
+    display: flex;
+    gap: 8px;
+    align-items: flex-end;
+}
+.finance-input {
+    flex: 1;
+    border: 2px solid #BBDEFB;
+    border-radius: 18px;
+    padding: 8px 14px;
+    font-size: 13px;
+    outline: none;
+    resize: none;
+    max-height: 80px;
+    min-height: 36px;
+    font-family: inherit;
+    transition: border-color 0.2s;
+}
+.finance-input:focus { border-color: #1976D2; }
+.finance-send-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: #1976D2;
+    color: white;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+    transition: all 0.2s;
+}
+.finance-send-btn:hover { background: #0D47A1; }
+.finance-send-btn:disabled { background: #ccc; cursor: not-allowed; }
+.finance-toolbar {
+    display: flex;
+    gap: 8px;
+    margin-top: 6px;
+}
+.finance-toolbar button {
+    background: none;
+    border: none;
+    color: #999;
+    cursor: pointer;
+    font-size: 11px;
+    padding: 2px 6px;
+}
+.finance-toolbar button:hover { color: #1976D2; }
+
+/* Scrollbar styling */
+.finance-messages::-webkit-scrollbar,
+.excel-table-wrapper::-webkit-scrollbar,
+.task-planning-panel::-webkit-scrollbar {
+    width: 6px;
+}
+.finance-messages::-webkit-scrollbar-thumb,
+.excel-table-wrapper::-webkit-scrollbar-thumb,
+.task-planning-panel::-webkit-scrollbar-thumb {
+    background: #BDBDBD;
+    border-radius: 3px;
+}
+.finance-messages::-webkit-scrollbar-track,
+.excel-table-wrapper::-webkit-scrollbar-track,
+.task-planning-panel::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+/* Task progress badge */
+.task-progress-badge {
+    font-size: 11px;
+    background: #1976D2;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: 500;
+}
+
+/* Spinner for active tasks */
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+.task-spinner {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 2px solid #BBDEFB;
+    border-top-color: #1976D2;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+/* Quick Actions */
+.finance-quick-actions {
+    padding: 10px 16px;
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    border-bottom: 1px solid #E0E0E0;
+    flex-shrink: 0;
+    background: white;
+}
+.finance-quick-btn {
+    padding: 5px 12px;
+    border-radius: 14px;
+    background: #E3F2FD;
+    border: 1px solid #90CAF9;
+    color: #1565C0;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+.finance-quick-btn:hover {
+    background: #1976D2;
+    color: white;
+    border-color: #1976D2;
+}
