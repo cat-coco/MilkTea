@@ -209,28 +209,33 @@
                 if (done) break;
 
                 buffer += decoder.decode(value, { stream: true });
-                const lines = buffer.split('\n');
-                buffer = lines.pop();
+                const events = buffer.split('\n\n');
+                buffer = events.pop();
 
-                let eventName = '';
-                for (const line of lines) {
-                    if (line.startsWith('event:')) {
-                        eventName = line.substring(6).trim();
-                    } else if (line.startsWith('data:')) {
-                        const data = line.substring(5);
-                        if (eventName === 'meta') {
-                            try {
-                                const meta = JSON.parse(data);
-                                sessionId = meta.sessionId;
-                            } catch (e) { /* ignore */ }
-                        } else if (eventName === 'token') {
-                            streamMsg.append(data);
-                        } else if (eventName === 'error') {
-                            if (!streamMsg.getText()) {
-                                streamMsg.append(data);
-                            }
+                for (const event of events) {
+                    let eventName = '';
+                    let dataLines = [];
+                    for (const line of event.split('\n')) {
+                        if (line.startsWith('event:')) {
+                            eventName = line.substring(6).trim();
+                        } else if (line.startsWith('data:')) {
+                            dataLines.push(line.substring(5));
                         }
-                        eventName = '';
+                    }
+                    if (dataLines.length === 0) continue;
+                    const data = dataLines.join('\n');
+
+                    if (eventName === 'meta') {
+                        try {
+                            const meta = JSON.parse(data);
+                            sessionId = meta.sessionId;
+                        } catch (e) { /* ignore */ }
+                    } else if (eventName === 'token') {
+                        streamMsg.append(data);
+                    } else if (eventName === 'error') {
+                        if (!streamMsg.getText()) {
+                            streamMsg.append(data);
+                        }
                     }
                 }
             }

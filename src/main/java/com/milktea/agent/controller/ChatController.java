@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Chat endpoint using spring-ai-alibaba ReactAgent with SkillsAgentHook
@@ -153,11 +154,12 @@ public class ChatController {
                         .data("{\"sessionId\":\"" + sessionId + "\"}")
                         .build()),
 
-                // 2. Stream LLM tokens
+                // 2. Stream LLM tokens (filter out <think> reasoning content)
                 chatModel.stream(new Prompt(messages))
                         .mapNotNull(resp -> resp.getResult() != null
                                 ? resp.getResult().getOutput().getText() : null)
                         .filter(content -> !content.isEmpty())
+                        .transform(this::filterThinkingTokens)
                         .doOnNext(fullReply::append)
                         .map(content -> ServerSentEvent.<String>builder()
                                 .event("token")
@@ -181,6 +183,45 @@ public class ChatController {
                             .build());
                 })
         );
+    }
+
+    /**
+     * Filter out model's &lt;think&gt;...&lt;/think&gt; reasoning tokens from the stream.
+     * Some models (e.g. qwen) emit thinking/reasoning in &lt;think&gt; blocks before the actual response.
+     * This method buffers until thinking is complete, then streams the real content.
+     */
+    private Flux<String> filterThinkingTokens(Flux<String> tokens) {
+        StringBuilder buffer = new StringBuilder();
+        AtomicBoolean passThrough = new AtomicBoolean(false);
+
+        return tokens.concatMap(token -> {
+            // After thinking is done, stream tokens directly
+            if (passThrough.get()) {
+                return Flux.just(token);
+            }
+
+            buffer.append(token);
+            String buf = buffer.toString();
+
+            // Check if </think> end tag is found
+            int endIdx = buf.indexOf("</think>");
+            if (endIdx >= 0) {
+                passThrough.set(true);
+                buffer.setLength(0);
+                String afterThink = buf.substring(endIdx + "</think>".length()).strip();
+                return afterThink.isEmpty() ? Flux.empty() : Flux.just(afterThink);
+            }
+
+            // If buffer doesn't start with '<' or is long enough without <think>, no thinking mode
+            if (!buf.startsWith("<") || (buf.length() >= 7 && !buf.startsWith("<think"))) {
+                passThrough.set(true);
+                buffer.setLength(0);
+                return Flux.just(buf);
+            }
+
+            // Still buffering, waiting to detect thinking mode
+            return Flux.empty();
+        });
     }
 
     /**

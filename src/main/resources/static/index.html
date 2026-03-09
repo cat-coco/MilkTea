@@ -573,35 +573,41 @@ async function sendMessage() {
             if (done) break;
 
             buffer += decoder.decode(value, { stream: true });
-            const lines = buffer.split('\n');
-            buffer = lines.pop(); // keep incomplete line in buffer
 
-            let eventName = '';
-            for (const line of lines) {
-                if (line.startsWith('event:')) {
-                    eventName = line.substring(6).trim();
-                } else if (line.startsWith('data:')) {
-                    const data = line.substring(5);
-                    if (eventName === 'meta') {
-                        try {
-                            const meta = JSON.parse(data);
-                            sessionId = meta.sessionId;
-                            document.getElementById('sessionInfo').textContent =
-                                `会话: ${sessionId.substring(0, 8)}... | Tab: ${tabId.substring(0, 8)}...`;
-                        } catch (e) { /* ignore */ }
-                    } else if (eventName === 'token') {
-                        streamMsg.append(data);
-                    } else if (eventName === 'error') {
-                        if (!streamMsg.getText()) {
-                            streamMsg.append(data);
-                        }
+            // SSE events are separated by blank lines (\n\n)
+            const events = buffer.split('\n\n');
+            buffer = events.pop(); // keep incomplete event in buffer
+
+            for (const event of events) {
+                let eventName = '';
+                let dataLines = [];
+                for (const line of event.split('\n')) {
+                    if (line.startsWith('event:')) {
+                        eventName = line.substring(6).trim();
+                    } else if (line.startsWith('data:')) {
+                        dataLines.push(line.substring(5));
                     }
-                    eventName = '';
+                }
+                if (dataLines.length === 0) continue;
+                const data = dataLines.join('\n');
+
+                if (eventName === 'meta') {
+                    try {
+                        const meta = JSON.parse(data);
+                        sessionId = meta.sessionId;
+                        document.getElementById('sessionInfo').textContent =
+                            `会话: ${sessionId.substring(0, 8)}... | Tab: ${tabId.substring(0, 8)}...`;
+                    } catch (e) { /* ignore */ }
+                } else if (eventName === 'token') {
+                    streamMsg.append(data);
+                } else if (eventName === 'error') {
+                    if (!streamMsg.getText()) {
+                        streamMsg.append(data);
+                    }
                 }
             }
         }
 
-        // If nothing was streamed, show a fallback
         if (!streamMsg.getText()) {
             streamMsg.append('我没有理解您的意思，请再说一次~');
         }
