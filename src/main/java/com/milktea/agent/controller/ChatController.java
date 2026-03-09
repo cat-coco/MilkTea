@@ -2,11 +2,13 @@ package com.milktea.agent.controller;
 
 import com.alibaba.cloud.ai.graph.agent.ReactAgent;
 import com.alibaba.cloud.ai.graph.agent.hook.skills.SkillsAgentHook;
+import com.milktea.agent.agent.OrderTools;
 import com.milktea.agent.context.ContextManager;
 import com.milktea.agent.memory.MemoryEntry;
 import com.milktea.agent.memory.MemoryManager;
 import com.milktea.agent.prompt.PromptManager;
 import com.milktea.agent.rag.RagManager;
+import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.SystemMessage;
 import org.springframework.ai.chat.messages.UserMessage;
@@ -18,8 +20,6 @@ import org.springframework.http.MediaType;
 import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Schedulers;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -34,6 +34,8 @@ public class ChatController {
 
     private final ReactAgent mainAgent;
     private final ChatModel chatModel;
+    private final ChatClient chatClient;
+    private final OrderTools orderTools;
     private final ContextManager contextManager;
     private final MemoryManager memoryManager;
     private final SkillsAgentHook skillsAgentHook;
@@ -42,6 +44,7 @@ public class ChatController {
 
     public ChatController(@Qualifier("mainAgent") ReactAgent mainAgent,
                           ChatModel chatModel,
+                          OrderTools orderTools,
                           ContextManager contextManager,
                           MemoryManager memoryManager,
                           SkillsAgentHook skillsAgentHook,
@@ -49,6 +52,8 @@ public class ChatController {
                           RagManager ragManager) {
         this.mainAgent = mainAgent;
         this.chatModel = chatModel;
+        this.chatClient = ChatClient.builder(chatModel).build();
+        this.orderTools = orderTools;
         this.contextManager = contextManager;
         this.memoryManager = memoryManager;
         this.skillsAgentHook = skillsAgentHook;
@@ -111,8 +116,8 @@ public class ChatController {
 
     /**
      * Streaming chat endpoint using Server-Sent Events.
-     * Uses mainAgent.call() first (preserving skill capabilities like order/query/cancel).
-     * Falls back to chatModel.stream() for true token-by-token streaming when agent fails.
+     * Uses ChatClient.stream() with OrderTools for true token-by-token streaming
+     * while preserving tool calling capabilities (order/query/cancel).
      */
     @PostMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<ServerSentEvent<String>> streamChat(@RequestBody ChatRequest request) {
@@ -129,11 +134,22 @@ public class ChatController {
         contextManager.getOrCreateContext(sessionId, tabId);
         contextManager.addUserMessage(contextKey, userMessage);
 
-        // Build enriched prompt for fallback path
+        // Build enriched system prompt with RAG + memory
         String ragContext = ragManager.getRelevantContext(userMessage);
         List<MemoryEntry> memories = memoryManager.searchSessionMemories(sessionId, userMessage);
+        String systemPrompt = buildSystemPrompt(ragContext, memories);
 
         StringBuilder fullReply = new StringBuilder();
+
+        // ChatClient.stream() supports both streaming AND tool calling:
+        // When the model calls a tool (e.g. createOrder), ChatClient executes it,
+        // sends the result back, and continues streaming the final response.
+        Flux<String> contentStream = chatClient.prompt()
+                .system(systemPrompt)
+                .user(userMessage)
+                .tools(orderTools)
+                .stream()
+                .content();
 
         return Flux.concat(
                 // 1. Send session metadata
@@ -142,30 +158,19 @@ public class ChatController {
                         .data("{\"sessionId\":\"" + sessionId + "\"}")
                         .build()),
 
-                // 2. Try mainAgent first (with skills), fall back to chatModel.stream()
-                Mono.fromCallable(() -> mainAgent.call(userMessage))
-                        .subscribeOn(Schedulers.boundedElastic())
-                        .filter(reply -> reply != null && !reply.isBlank())
-                        .flux()
+                // 2. Stream tokens with thinking filter
+                contentStream
+                        .filter(content -> content != null && !content.isEmpty())
+                        .transform(this::filterThinkingTokens)
                         .doOnNext(fullReply::append)
-                        .map(reply -> ServerSentEvent.<String>builder()
+                        .map(content -> ServerSentEvent.<String>builder()
                                 .event("token")
-                                .data(reply)
+                                .data(content)
                                 .build())
-                        .onErrorResume(e -> {
-                            // Agent failed, fall back to chatModel streaming
-                            List<Message> messages = buildMessages(userMessage, ragContext, memories);
-                            return chatModel.stream(new Prompt(messages))
-                                    .mapNotNull(resp -> resp.getResult() != null
-                                            ? resp.getResult().getOutput().getText() : null)
-                                    .filter(content -> !content.isEmpty())
-                                    .transform(this::filterThinkingTokens)
-                                    .doOnNext(fullReply::append)
-                                    .map(content -> ServerSentEvent.<String>builder()
-                                            .event("token")
-                                            .data(content)
-                                            .build());
-                        }),
+                        .onErrorResume(e -> Flux.just(ServerSentEvent.<String>builder()
+                                .event("error")
+                                .data("生成回复时出错，请重试")
+                                .build())),
 
                 // 3. Save context & send done
                 Flux.defer(() -> {
@@ -183,10 +188,9 @@ public class ChatController {
     }
 
     /**
-     * Build enriched message list with system prompt, RAG context, and memory.
+     * Build enriched system prompt with RAG context and memory.
      */
-    private List<Message> buildMessages(String userMessage, String ragContext,
-                                         List<MemoryEntry> memories) {
+    private String buildSystemPrompt(String ragContext, List<MemoryEntry> memories) {
         StringBuilder systemPrompt = new StringBuilder(promptManager.getPrompt("system"));
         if (ragContext != null && !ragContext.isBlank()) {
             systemPrompt.append("\n\n【参考知识库信息】\n").append(ragContext);
@@ -196,10 +200,7 @@ public class ChatController {
             memories.forEach(m -> systemPrompt.append("- ")
                     .append(m.key()).append(": ").append(m.value()).append("\n"));
         }
-        List<Message> messages = new ArrayList<>();
-        messages.add(new SystemMessage(systemPrompt.toString()));
-        messages.add(new UserMessage(userMessage));
-        return messages;
+        return systemPrompt.toString();
     }
 
     /**
@@ -247,7 +248,10 @@ public class ChatController {
     private String fallbackChat(String userMessage, String ragContext,
                                  List<MemoryEntry> memories) {
         try {
-            List<Message> messages = buildMessages(userMessage, ragContext, memories);
+            String systemPrompt = buildSystemPrompt(ragContext, memories);
+            List<Message> messages = List.of(
+                    new SystemMessage(systemPrompt),
+                    new UserMessage(userMessage));
             ChatResponse response = chatModel.call(new Prompt(messages));
             return response.getResult().getOutput().getContent();
         } catch (Exception e) {
