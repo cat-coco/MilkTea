@@ -279,6 +279,7 @@
         /* Input Area */
         .input-area {
             padding: 12px 16px; background: white; border-top: 1px solid var(--border); flex-shrink: 0;
+            position: relative;
         }
         .input-row { display: flex; gap: 8px; align-items: flex-end; }
         .chat-input {
@@ -303,6 +304,39 @@
         /* Scrollbar */
         .messages::-webkit-scrollbar, .excel-content::-webkit-scrollbar { width: 6px; }
         .messages::-webkit-scrollbar-thumb, .excel-content::-webkit-scrollbar-thumb { background: #BDBDBD; border-radius: 3px; }
+
+        /* Download button */
+        .download-btn {
+            padding: 8px 24px; border-radius: 8px; background: var(--primary);
+            color: white; border: none; font-size: 13px; cursor: pointer;
+            transition: all 0.2s; font-weight: 500; display: inline-flex;
+            align-items: center; gap: 6px;
+        }
+        .download-btn:hover { background: var(--primary-dark); }
+
+        /* Command dropdown */
+        .cmd-trigger {
+            width: 36px; height: 36px; border-radius: 50%; background: #E3F2FD;
+            border: 1px solid #90CAF9; display: flex; align-items: center; justify-content: center;
+            cursor: pointer; flex-shrink: 0; transition: all 0.2s; color: #1565C0;
+            font-size: 16px; font-weight: 700;
+        }
+        .cmd-trigger:hover { background: #BBDEFB; }
+        .cmd-dropdown {
+            display: none; position: absolute; bottom: 100%; left: 0; right: 0;
+            background: white; border: 1px solid #E0E0E0; border-radius: 10px;
+            box-shadow: 0 -4px 12px rgba(0,0,0,0.1); margin-bottom: 8px;
+            overflow: hidden; z-index: 20;
+        }
+        .cmd-dropdown.show { display: block; animation: fadeIn 0.15s ease; }
+        .cmd-dropdown-title { font-size: 11px; color: #999; padding: 8px 14px 4px; }
+        .cmd-item {
+            padding: 10px 14px; font-size: 13px; cursor: pointer;
+            color: #333; transition: background 0.15s;
+        }
+        .cmd-item:hover { background: #E3F2FD; }
+        .cmd-item .cmd-label { font-weight: 500; }
+        .cmd-item .cmd-desc { font-size: 11px; color: #999; margin-top: 2px; }
 
         @media (max-width: 768px) {
             .chat-panel { width: 100%; }
@@ -351,15 +385,26 @@
 
     <!-- Right: Chat Panel -->
     <div class="chat-panel">
-        <div class="quick-actions">
-            <button class="quick-btn" onclick="sendQuick('请帮我对现金流报表进行波动合理性分析')">现金流分析</button>
-            <button class="quick-btn" onclick="sendQuick('请帮我检查资产负债表的波动情况')">资产负债表检查</button>
-            <button class="quick-btn" onclick="sendQuick('显示所有波动超过20%的报表项')">异常筛查</button>
-        </div>
         <div class="messages" id="messages"></div>
         <div class="input-area">
+            <div class="cmd-dropdown" id="cmdDropdown">
+                <div class="cmd-dropdown-title">/ 快捷指令</div>
+                <div class="cmd-item" onclick="selectCmd('请帮我对现金流报表进行波动合理性分析')">
+                    <div class="cmd-label">现金流波动合理性检查分析</div>
+                    <div class="cmd-desc">对现金流报表进行波动合理性检查分析</div>
+                </div>
+                <div class="cmd-item" onclick="selectCmd('请帮我检查资产负债表的波动情况')">
+                    <div class="cmd-label">资产负债表检查</div>
+                    <div class="cmd-desc">检查资产负债表的波动情况</div>
+                </div>
+                <div class="cmd-item" onclick="selectCmd('显示所有波动超过20%的报表项')">
+                    <div class="cmd-label">异常筛查</div>
+                    <div class="cmd-desc">显示所有波动超过20%的报表项</div>
+                </div>
+            </div>
             <div class="input-row">
-                <textarea class="chat-input" id="chatInput" placeholder="请输入消息，例如：请帮我对现金流报表进行波动合理性分析..." rows="1"></textarea>
+                <div class="cmd-trigger" onclick="toggleCmdDropdown()" title="快捷指令">/</div>
+                <textarea class="chat-input" id="chatInput" placeholder="输入消息或点击 / 选择快捷指令..." rows="1"></textarea>
                 <button class="send-btn" id="sendBtn" onclick="sendMessage()">&#10148;</button>
             </div>
             <div class="input-toolbar">
@@ -422,6 +467,11 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('chatInput').addEventListener('input', function() {
         this.style.height = 'auto';
         this.style.height = Math.min(this.scrollHeight, 80) + 'px';
+    });
+    document.addEventListener('click', e => {
+        if (!e.target.closest('.cmd-trigger') && !e.target.closest('.cmd-dropdown')) {
+            document.getElementById('cmdDropdown').classList.remove('show');
+        }
     });
 });
 
@@ -778,6 +828,11 @@ function renderSheet() {
         h += '</tr>';
     });
     h += '</tbody></table>';
+    if (s.name === '现金流报表分析结论') {
+        h += '<div style="text-align:center;padding:16px 0"><button class="download-btn" onclick="downloadSheet()">'
+           + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>'
+           + ' 下载Excel</button></div>';
+    }
     el.innerHTML = h;
 }
 
@@ -805,13 +860,64 @@ function esc(t) { const d = document.createElement('div'); d.textContent = t; re
 function scrollChat() { const c = document.getElementById('messages'); c.scrollTop = c.scrollHeight; }
 function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
 
+// ==================== Streaming / Typewriter ====================
+async function addMsgStreaming(type, text, durationMs) {
+    durationMs = durationMs || 1000;
+    const c = document.getElementById('messages');
+    const d = document.createElement('div');
+    d.className = `msg ${type}`;
+    const av = type === 'bot' ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3h18v18H3z"/><path d="M3 9h18"/><path d="M9 3v18"/></svg>' : '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-7 8-7s8 3 8 7"/></svg>';
+    d.innerHTML = `<div class="msg-avatar">${av}</div><div class="msg-bubble"></div>`;
+    c.appendChild(d);
+    const bubble = d.querySelector('.msg-bubble');
+    const charInterval = Math.max(durationMs / text.length, 5);
+    for (let i = 0; i < text.length; i++) {
+        bubble.textContent = text.substring(0, i + 1);
+        c.scrollTop = c.scrollHeight;
+        await delay(charInterval);
+    }
+}
+
+// ==================== Command Dropdown ====================
+function toggleCmdDropdown() {
+    document.getElementById('cmdDropdown').classList.toggle('show');
+}
+
+function selectCmd(text) {
+    document.getElementById('cmdDropdown').classList.remove('show');
+    document.getElementById('chatInput').value = text;
+    sendMessage();
+}
+
+// ==================== Download Excel ====================
+function escHtml(t) { return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function downloadSheet() {
+    const s = sheets[activeSheet];
+    let html = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:spreadsheet" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="UTF-8"></head><body><table border="1">';
+    html += '<tr>' + s.headers.map(h => '<th style="background:#E3F2FD;font-weight:bold">' + escHtml(h) + '</th>').join('') + '</tr>';
+    s.rows.forEach(row => {
+        html += '<tr>' + s.headers.map(h => '<td>' + escHtml(row[h] || '') + '</td>').join('') + '</tr>';
+    });
+    html += '</table></body></html>';
+    const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = s.name + '.xls';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
 async function loadWelcome() {
     try {
         const r = await fetch(`${API}/api/finance/welcome`);
         const d = await r.json();
-        addMsg('bot', d.message);
+        await addMsgStreaming('bot', d.message, 1000);
     } catch {
-        addMsg('bot', '您好！我是财报波动合理性检查智能助手。我可以帮您分析报表项波动的合理性，包括现金流量表、资产负债表哟');
+        await addMsgStreaming('bot', '您好！我是财报波动合理性检查智能助手。我可以帮您分析报表项波动的合理性，包括现金流量表、资产负债表哟', 1000);
     }
 }
 
@@ -839,7 +945,7 @@ async function sendMessage() {
         sessionId = d.sessionId;
         document.getElementById('sessionInfo').textContent = `会话: ${sessionId.substring(0, 8)}...`;
         hideTyping();
-        addMsg('bot', d.reply);
+        await addMsgStreaming('bot', d.reply, 1000);
         if (d.workflowActive) {
             await startWorkflow();
         }
