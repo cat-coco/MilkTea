@@ -176,11 +176,35 @@
             display: flex; align-items: center; justify-content: center;
         }
         .sub-task-text { flex: 1; }
-        .sub-task.done .sub-task-text { color: #999; text-decoration: line-through; }
+        .sub-task.done .sub-task-text { color: #888; }
         .sub-task.running { background: rgba(59,130,246,0.06); }
         .sub-task.running .sub-task-text { color: #2563EB; font-weight: 500; }
         .sub-task-status { font-size: 10px; color: #999; flex-shrink: 0; }
         .sub-task.running .sub-task-status { color: #2563EB; }
+        .sub-task-retry {
+            font-size: 10px; color: #3B82F6; cursor: pointer; flex-shrink: 0;
+            padding: 1px 8px; border: 1px solid #90CAF9; border-radius: 10px;
+            background: #E3F2FD; transition: all 0.15s; display: none;
+        }
+        .sub-task-retry:hover { background: #3B82F6; color: white; }
+        .sub-task.done .sub-task-retry { display: inline-block; }
+
+        /* Confirm dialog in chat */
+        .confirm-card {
+            background: white; border: 1px solid #E0E0E0; border-radius: 12px;
+            padding: 14px 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+            animation: fadeIn 0.3s ease; width: 100%;
+        }
+        .confirm-card .confirm-text { font-size: 12px; color: #333; line-height: 1.6; margin-bottom: 12px; }
+        .confirm-btns { display: flex; gap: 10px; }
+        .confirm-btn {
+            flex: 1; padding: 8px 0; border-radius: 8px; font-size: 12px; font-weight: 600;
+            cursor: pointer; border: none; transition: all 0.15s;
+        }
+        .confirm-btn.yes { background: #3B82F6; color: white; }
+        .confirm-btn.yes:hover { background: #2563EB; }
+        .confirm-btn.no { background: #F5F5F5; color: #666; border: 1px solid #DDD; }
+        .confirm-btn.no:hover { background: #E0E0E0; }
 
         /* Step reply (completion detail) */
         .step-reply {
@@ -381,10 +405,13 @@ const STEPS = [
 // Track state per step card
 let stepCardStates = {};
 let workflowStarted = false;
+let workflowResolve = null; // for confirm dialog
 
 // Excel
 let sheets = [];
 let activeSheet = 0;
+// Track sheet count before each major step for rollback
+let sheetSnapshotBeforeStep = {};
 
 // ==================== Init ====================
 document.addEventListener('DOMContentLoaded', () => {
@@ -452,6 +479,7 @@ async function revealSubTasks(step) {
                 <div class="sub-task-icon" id="sicon-${sub.id}">${ICON_PENDING}</div>
                 <div class="sub-task-text">${esc(sub.text)}</div>
                 <div class="sub-task-status" id="sst-${sub.id}"></div>
+                <span class="sub-task-retry" id="retry-${sub.id}" onclick="event.stopPropagation();retryFromStep('${sub.id}')">重试</span>
             </div>
         `;
         subsEl.appendChild(wrap);
@@ -512,31 +540,39 @@ function hideStepThinking(stepId) {
 async function startWorkflow() {
     if (workflowStarted) return;
     workflowStarted = true;
-    await executeWorkflowSteps();
+    await executeWorkflowFromStep(0);
 }
 
-async function executeWorkflowSteps() {
-    for (let i = 0; i < STEPS.length; i++) {
+async function executeWorkflowFromStep(startIdx) {
+    for (let i = startIdx; i < STEPS.length; i++) {
         const step = STEPS[i];
-        // 1. Create this step card (user sees it for the first time)
-        await delay(600 + Math.random() * 400);
-        createStepCard(step, i);
-        scrollChat();
 
-        // 2. Activate card and reveal sub-tasks with thinking
+        // Snapshot sheet count before this major step (for rollback)
+        sheetSnapshotBeforeStep[step.id] = sheets.length;
+
+        // 1. Create step card if not exists
+        if (!document.getElementById('sc-' + step.id)) {
+            await delay(600 + Math.random() * 400);
+            createStepCard(step, i);
+            scrollChat();
+        } else {
+            // Reset card for re-execution
+            resetStepCard(step);
+        }
+
+        // 2. Activate and reveal sub-tasks
         updateStepBadge(step.id, 'running');
         await revealSubTasks(step);
 
-        // 3. Execute all sub-tasks of this step
+        // 3. Execute all sub-tasks
+        let stepAborted = false;
         for (const sub of step.subs) {
             setSubTaskStatus(sub.id, 'running');
             showStepThinking(step.id, '正在执行...');
             scrollChat();
 
-            // Simulate thinking 1-2s
             await delay(1200 + Math.random() * 800);
 
-            // Call backend
             try {
                 const r = await fetch(`${API}/api/finance/execute-step`, {
                     method: 'POST',
@@ -582,7 +618,91 @@ async function executeWorkflowSteps() {
                 return;
             }
         }
+
+        // After step4: show confirmation dialog
+        if (step.id === 'step4') {
+            const proceed = await showStep4Confirm();
+            if (!proceed) {
+                addMsg('bot', '已停止执行，您可以在步骤中点击"重试"按钮重新执行。');
+                return;
+            }
+        }
     }
+}
+
+// Show step4 confirmation dialog
+function showStep4Confirm() {
+    return new Promise(resolve => {
+        workflowResolve = resolve;
+        const c = document.getElementById('messages');
+        const card = document.createElement('div');
+        card.className = 'confirm-card';
+        card.id = 'step4Confirm';
+        card.innerHTML = `
+            <div class="confirm-text">校验结果显示明细数据与报表数据存在差异（差异 ≥ 1亿）。<br>是否忽略差异，继续执行后续分析步骤？</div>
+            <div class="confirm-btns">
+                <button class="confirm-btn yes" onclick="handleStep4Confirm(true)">是，忽略差异继续执行</button>
+                <button class="confirm-btn no" onclick="handleStep4Confirm(false)">否，暂停执行</button>
+            </div>
+        `;
+        c.appendChild(card);
+        scrollChat();
+    });
+}
+
+function handleStep4Confirm(yes) {
+    const card = document.getElementById('step4Confirm');
+    if (card) {
+        card.innerHTML = `<div class="confirm-text" style="color:#888">${yes ? '已选择：忽略差异，继续执行' : '已选择：暂停执行'}</div>`;
+    }
+    if (workflowResolve) { workflowResolve(yes); workflowResolve = null; }
+}
+
+// Reset a step card for re-execution
+function resetStepCard(step) {
+    const subsEl = document.getElementById('subs-' + step.id);
+    if (subsEl) subsEl.innerHTML = '';
+    const replyEl = document.getElementById('reply-' + step.id);
+    if (replyEl) { replyEl.textContent = ''; replyEl.classList.remove('show'); }
+    updateStepBadge(step.id, 'pending');
+    updateStepProgress(step.id, 0, false);
+    hideStepThinking(step.id);
+}
+
+// Retry from a specific sub-task's major step
+async function retryFromStep(subId) {
+    if (isLoading) return;
+    // Find major step index
+    let majorIdx = -1;
+    for (let i = 0; i < STEPS.length; i++) {
+        if (STEPS[i].subs.some(s => s.id === subId)) { majorIdx = i; break; }
+    }
+    if (majorIdx < 0) return;
+
+    // Rollback sheets: remove all sheets created from this step onward
+    const snapshot = sheetSnapshotBeforeStep[STEPS[majorIdx].id];
+    if (snapshot !== undefined && sheets.length > snapshot) {
+        sheets = sheets.slice(0, snapshot);
+        activeSheet = Math.max(0, sheets.length - 1);
+        renderTabs(); renderSheet();
+    }
+
+    // Remove step cards from this step onward
+    for (let i = majorIdx; i < STEPS.length; i++) {
+        const card = document.getElementById('sc-' + STEPS[i].id);
+        if (card) card.remove();
+        delete stepCardStates[STEPS[i].id];
+    }
+
+    // Remove any confirm card
+    const confirmCard = document.getElementById('step4Confirm');
+    if (confirmCard) confirmCard.remove();
+
+    isLoading = true;
+    document.getElementById('sendBtn').disabled = true;
+    await executeWorkflowFromStep(majorIdx);
+    isLoading = false;
+    document.getElementById('sendBtn').disabled = false;
 }
 
 // ==================== Excel ====================
