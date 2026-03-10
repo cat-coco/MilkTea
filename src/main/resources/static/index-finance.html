@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>财报波动合理性分析 - AI智能助手</title>
+    <title>财报波动合理性检查 - Spring AI Agent</title>
     <style>
         :root {
             --primary: #1976D2;
@@ -321,8 +321,8 @@
             </svg>
         </div>
         <div>
-            <h1>财报波动合理性分析</h1>
-            <div class="subtitle">AI智能助手 - Spring AI Alibaba Graph Agent</div>
+            <h1>财报波动合理性检查</h1>
+            <div class="subtitle">Spring AI Agent</div>
         </div>
     </div>
 </div>
@@ -331,7 +331,7 @@
     <!-- Left: Excel Area -->
     <div class="excel-area">
         <div class="excel-toolbar">
-            <span class="toolbar-label">在线数据工作表</span>
+            <span class="toolbar-label">EFM报告数据监控</span>
             <span style="opacity:0.6">|</span>
             <span>财报波动分析工作区</span>
         </div>
@@ -811,7 +811,7 @@ async function loadWelcome() {
         const d = await r.json();
         addMsg('bot', d.message);
     } catch {
-        addMsg('bot', '您好！我是财报波动合理性分析智能助手。我可以帮您分析报表项波动的合理性，包括现金流量表、资产负债表等。请告诉我您想分析哪份报表？');
+        addMsg('bot', '您好！我是财报波动合理性检查智能助手。我可以帮您分析报表项波动的合理性，包括现金流量表、资产负债表哟');
     }
 }
 
