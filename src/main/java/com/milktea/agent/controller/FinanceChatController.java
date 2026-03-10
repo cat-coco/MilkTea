@@ -88,7 +88,7 @@ public class FinanceChatController {
 
         } else {
             try {
-                reply = financeMainAgent.call(userMessage);
+                reply = financeMainAgent.call(userMessage).getText();
             } catch (Exception e) {
                 reply = fallbackChat(userMessage, memories);
             }
@@ -320,9 +320,8 @@ public class FinanceChatController {
 
     @GetMapping("/welcome")
     public Map<String, String> welcome() {
-        return Map.of("message", "您好！我是财报波动合理性分析智能助手。"
-                + "我可以帮您分析报表项波动的合理性，包括现金流量表、资产负债表等。"
-                + "请告诉我您想分析哪份报表？");
+        return Map.of("message", "您好！我是财报波动合理性检查智能助手。"
+                + "我可以帮您分析报表项波动的合理性，包括现金流量表、资产负债表哟");
     }
 
     // ===================== Helper Methods =====================
@@ -350,7 +349,7 @@ public class FinanceChatController {
             messages.add(new SystemMessage(systemPrompt.toString()));
             messages.add(new UserMessage(userMessage));
             ChatResponse response = chatModel.call(new Prompt(messages));
-            return response.getResult().getOutput().getContent();
+            return response.getResult().getOutput().getText();
         } catch (Exception e) {
             return "抱歉，当前无法处理您的请求，请稍后再试。";
         }
