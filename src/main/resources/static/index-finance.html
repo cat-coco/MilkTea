@@ -116,25 +116,25 @@
 
         /* Task Plan Card - in chat, Claude Code style */
         .task-card {
-            background: #1B1B1B; border-radius: 10px; overflow: hidden;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            background: #F5F5F5; border-radius: 10px; overflow: visible;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.08); border: 1px solid #E0E0E0;
             font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
             width: 100%; animation: fadeIn 0.3s ease;
         }
         .task-card-header {
             display: flex; align-items: center; justify-content: space-between;
             padding: 10px 14px; cursor: pointer; user-select: none;
-            background: #252525; transition: background 0.15s;
+            background: #ECECEC; border-radius: 10px 10px 0 0; transition: background 0.15s;
         }
-        .task-card-header:hover { background: #303030; }
+        .task-card-header:hover { background: #E0E0E0; }
         .task-card-title {
-            font-size: 12px; font-weight: 600; color: #E0E0E0;
+            font-size: 12px; font-weight: 600; color: #333;
             display: flex; align-items: center; gap: 8px;
         }
         .task-card-title .chevron {
             display: inline-flex; align-items: center; justify-content: center;
             width: 16px; height: 16px; transition: transform 0.2s ease;
-            color: #888; transform: rotate(90deg);
+            color: #666; transform: rotate(90deg);
         }
         .task-card-title .chevron.collapsed { transform: rotate(0deg); }
         .task-badge {
@@ -142,56 +142,53 @@
             padding: 2px 8px; border-radius: 10px; font-weight: 500;
         }
         .task-badge.all-done { background: #22C55E; }
-        .task-progress-bar { height: 2px; background: #333; overflow: hidden; }
+        .task-progress-bar { height: 2px; background: #DDD; overflow: hidden; }
         .task-progress-fill {
             height: 100%; background: linear-gradient(90deg, #3B82F6, #60A5FA);
             transition: width 0.4s ease;
         }
         .task-progress-fill.all-done { background: linear-gradient(90deg, #22C55E, #4ADE80); }
-        .task-body {
-            transition: max-height 0.3s ease, opacity 0.2s ease;
-            max-height: 2000px; opacity: 1; overflow: hidden;
-        }
-        .task-body.hidden { max-height: 0; opacity: 0; }
+        .task-body { overflow: hidden; }
+        .task-body.hidden { display: none; }
         .task-list { padding: 4px 0; }
         .task-item {
             display: flex; align-items: center; gap: 10px;
             padding: 5px 14px; font-size: 12px; line-height: 1.5;
-            color: #CCC; cursor: pointer; transition: background 0.15s;
+            color: #444; cursor: pointer; transition: background 0.15s;
         }
-        .task-item:hover { background: #252525; }
+        .task-item:hover { background: #EBEBEB; }
         .task-icon {
             flex-shrink: 0; width: 18px; height: 18px;
             display: flex; align-items: center; justify-content: center;
         }
         .task-text { flex: 1; }
-        .task-item.done .task-text { color: #666; text-decoration: line-through; }
-        .task-item.running { background: rgba(59,130,246,0.08); }
-        .task-item.running .task-text { color: #60A5FA; font-weight: 500; }
-        .task-status-text { font-size: 10px; color: #555; flex-shrink: 0; }
-        .task-item.running .task-status-text { color: #60A5FA; }
+        .task-item.done .task-text { color: #999; text-decoration: line-through; }
+        .task-item.running { background: rgba(59,130,246,0.06); }
+        .task-item.running .task-text { color: #2563EB; font-weight: 500; }
+        .task-status-text { font-size: 10px; color: #999; flex-shrink: 0; }
+        .task-item.running .task-status-text { color: #2563EB; }
         @keyframes spin { to { transform: rotate(360deg); } }
         .spinner {
             display: inline-block; width: 14px; height: 14px;
-            border: 2px solid #333; border-top-color: #60A5FA;
+            border: 2px solid #DDD; border-top-color: #3B82F6;
             border-radius: 50%; animation: spin 0.8s linear infinite;
         }
         /* Step detail / reply area inside card */
         .task-step-reply {
             max-height: 0; overflow: hidden; padding: 0 14px 0 42px;
-            font-size: 11px; color: #999; line-height: 1.6;
-            background: #161616; transition: max-height 0.25s ease, padding 0.25s ease;
+            font-size: 11px; color: #666; line-height: 1.6;
+            background: #EDEDED; transition: max-height 0.25s ease, padding 0.25s ease;
             white-space: pre-wrap; word-break: break-word;
         }
-        .task-step-reply.show { max-height: 200px; padding: 6px 14px 6px 42px; overflow-y: auto; }
+        .task-step-reply.show { max-height: none; padding: 6px 14px 6px 42px; overflow-y: auto; }
         /* Planning thinking animation */
         .task-thinking {
             display: flex; align-items: center; gap: 8px;
-            padding: 8px 14px; font-size: 11px; color: #60A5FA;
+            padding: 8px 14px; font-size: 11px; color: #3B82F6;
         }
         .task-thinking-dots { display: flex; gap: 3px; }
         .task-thinking-dots .td {
-            width: 5px; height: 5px; border-radius: 50%; background: #60A5FA;
+            width: 5px; height: 5px; border-radius: 50%; background: #3B82F6;
             animation: bounce 1.4s infinite ease-in-out;
         }
         .task-thinking-dots .td:nth-child(2) { animation-delay: 0.2s; }
