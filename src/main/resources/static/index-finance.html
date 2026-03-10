@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Financial Report Volatility Analysis - AI Intelligent Assistant</title>
+    <title>财报波动合理性分析 - AI智能助手</title>
     <style>
         :root {
             --primary: #1976D2;
@@ -49,90 +49,41 @@
         .app-header .subtitle { font-size: 11px; opacity: 0.8; }
 
         /* ========== Main Layout ========== */
-        .main-container {
-            display: flex; flex: 1; overflow: hidden;
-        }
+        .main-container { display: flex; flex: 1; overflow: hidden; }
 
         /* ========== Left: Excel Area ========== */
         .excel-area {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            background: var(--bg-white);
-            border-right: 1px solid var(--border);
-            overflow: hidden;
+            flex: 1; display: flex; flex-direction: column;
+            background: var(--bg-white); border-right: 1px solid var(--border); overflow: hidden;
         }
         .excel-toolbar {
-            background: #E3F2FD;
-            padding: 6px 16px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            font-size: 12px;
-            color: #1565C0;
-            flex-shrink: 0;
-            border-bottom: 1px solid #BBDEFB;
+            background: #E3F2FD; padding: 6px 16px; display: flex; align-items: center;
+            gap: 12px; font-size: 12px; color: #1565C0; flex-shrink: 0; border-bottom: 1px solid #BBDEFB;
         }
         .excel-toolbar .toolbar-label { font-weight: 600; }
         .excel-tab-bar {
-            display: flex;
-            background: #ECEFF1;
-            border-bottom: 2px solid var(--primary);
-            flex-shrink: 0;
-            overflow-x: auto;
-            padding: 0 4px;
-            min-height: 34px;
+            display: flex; background: #ECEFF1; border-bottom: 2px solid var(--primary);
+            flex-shrink: 0; overflow-x: auto; padding: 0 4px; min-height: 34px;
         }
         .excel-tab {
-            padding: 7px 16px;
-            font-size: 12px;
-            cursor: pointer;
-            border: 1px solid transparent;
-            border-bottom: none;
-            background: transparent;
-            color: #546E7A;
-            white-space: nowrap;
-            margin-top: 4px;
-            border-radius: 6px 6px 0 0;
-            transition: all 0.2s;
+            padding: 7px 16px; font-size: 12px; cursor: pointer; border: 1px solid transparent;
+            border-bottom: none; background: transparent; color: #546E7A; white-space: nowrap;
+            margin-top: 4px; border-radius: 6px 6px 0 0; transition: all 0.2s;
         }
         .excel-tab:hover { background: rgba(25, 118, 210, 0.08); }
-        .excel-tab.active {
-            background: white;
-            color: #1565C0;
-            font-weight: 600;
-            border-color: #BBDEFB;
-        }
-        .excel-content {
-            flex: 1;
-            overflow: auto;
-            background: white;
-        }
-        .excel-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 12px;
-        }
+        .excel-tab.active { background: white; color: #1565C0; font-weight: 600; border-color: #BBDEFB; }
+        .excel-content { flex: 1; overflow: auto; background: white; position: relative; }
+        .excel-table { width: 100%; border-collapse: collapse; font-size: 12px; }
         .excel-table th {
-            background: #E3F2FD;
-            color: #1565C0;
-            font-weight: 600;
-            padding: 10px 14px;
-            border: 1px solid #BBDEFB;
-            white-space: nowrap;
-            position: sticky;
-            top: 0;
-            z-index: 1;
+            background: #E3F2FD; color: #1565C0; font-weight: 600; padding: 10px 14px;
+            border: 1px solid #BBDEFB; white-space: nowrap; position: sticky; top: 0; z-index: 1;
         }
-        .excel-table td {
-            padding: 8px 14px;
-            border: 1px solid #E0E0E0;
-            white-space: nowrap;
-        }
+        .excel-table td { padding: 8px 14px; border: 1px solid #E0E0E0; white-space: nowrap; }
         .excel-table tr:nth-child(even) { background: #FAFAFA; }
         .excel-table tr:hover { background: #E3F2FD; }
         .excel-table td.cell-red { background: #FFEBEE; color: #C62828; font-weight: 600; }
         .excel-table td.cell-green { background: #E8F5E9; color: #2E7D32; }
+        .excel-table td.cell-conclusion { white-space: pre-wrap; max-width: 400px; line-height: 1.6; }
         .excel-placeholder {
             display: flex; flex-direction: column; align-items: center;
             justify-content: center; height: 100%; color: #90A4AE; gap: 16px;
@@ -140,77 +91,25 @@
         .excel-placeholder .ph-icon { font-size: 64px; opacity: 0.3; }
         .excel-placeholder .ph-text { font-size: 14px; }
         .excel-placeholder .ph-hint { font-size: 12px; color: #B0BEC5; }
+        /* Excel loading overlay */
+        .excel-loading {
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(255,255,255,0.85); display: flex; flex-direction: column;
+            align-items: center; justify-content: center; gap: 12px; z-index: 5;
+        }
+        .excel-loading-spinner {
+            width: 32px; height: 32px; border: 3px solid #E0E0E0;
+            border-top-color: var(--primary); border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        .excel-loading-text { font-size: 12px; color: #666; }
 
         /* ========== Right: Chat Panel ========== */
         .chat-panel {
-            width: 440px;
-            display: flex;
-            flex-direction: column;
-            background: #F8FAFC;
-            flex-shrink: 0;
+            width: 440px; display: flex; flex-direction: column; background: #F8FAFC; flex-shrink: 0;
         }
 
-        /* Task Planning */
-        .task-panel {
-            background: white;
-            border-bottom: 1px solid var(--border);
-            flex-shrink: 0;
-            max-height: 320px;
-            overflow-y: auto;
-            display: none;
-        }
-        .task-header {
-            display: flex; align-items: center; justify-content: space-between;
-            padding: 10px 16px;
-            cursor: pointer;
-            user-select: none;
-            background: #E3F2FD;
-            border-bottom: 1px solid #BBDEFB;
-        }
-        .task-header:hover { background: #BBDEFB; }
-        .task-title {
-            font-size: 13px; font-weight: 600; color: #1565C0;
-            display: flex; align-items: center; gap: 8px;
-        }
-        .task-badge {
-            font-size: 11px; background: var(--primary); color: white;
-            padding: 2px 8px; border-radius: 10px; font-weight: 500;
-        }
-        .task-toggle {
-            font-size: 12px; color: var(--primary); transition: transform 0.2s;
-        }
-        .task-toggle.collapsed { transform: rotate(-90deg); }
-        .task-list { padding: 8px 16px; }
-        .task-list.hidden { display: none; }
-        .task-item {
-            display: flex; align-items: flex-start; gap: 8px;
-            padding: 6px 8px; border-radius: 6px; font-size: 12px;
-            line-height: 1.5; transition: background 0.2s; cursor: pointer;
-        }
-        .task-item:hover { background: #F5F5F5; }
-        .task-icon { flex-shrink: 0; width: 18px; height: 18px;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 14px; margin-top: 1px; }
-        .task-text { flex: 1; color: #424242; }
-        .task-item.done .task-text { color: #9E9E9E; text-decoration: line-through; }
-        .task-item.running { background: #E3F2FD; border-left: 3px solid var(--primary); }
-        .task-item.running .task-text { color: #1565C0; font-weight: 500; }
-        .task-status-text { font-size: 11px; color: #9E9E9E; flex-shrink: 0; }
-        .task-item.running .task-status-text { color: var(--primary); }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        .spinner {
-            display: inline-block; width: 14px; height: 14px;
-            border: 2px solid #BBDEFB; border-top-color: var(--primary);
-            border-radius: 50%; animation: spin 0.8s linear infinite;
-        }
-        .task-detail {
-            display: none; padding: 4px 0 4px 26px;
-            font-size: 11px; color: #757575; line-height: 1.6;
-            border-left: 2px solid #E0E0E0; margin-left: 9px;
-        }
-        .task-detail.show { display: block; }
-
-        /* Quick Actions */
+        /* Quick Actions - fixed at top */
         .quick-actions {
             padding: 10px 16px; display: flex; gap: 6px; flex-wrap: wrap;
             border-bottom: 1px solid var(--border); flex-shrink: 0; background: white;
@@ -227,10 +126,98 @@
             flex: 1; overflow-y: auto; padding: 16px;
             display: flex; flex-direction: column; gap: 12px;
         }
-        .msg {
-            display: flex; gap: 8px; max-width: 92%;
-            animation: fadeIn 0.3s ease;
+
+        /* ===== Step Card (each major step is a collapsible card) ===== */
+        .step-card {
+            background: #F5F5F5; border-radius: 10px; overflow: visible;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.08); border: 1px solid #E0E0E0;
+            width: 100%; animation: fadeIn 0.3s ease;
         }
+        .step-card-header {
+            display: flex; align-items: center; gap: 10px;
+            padding: 9px 14px; cursor: pointer; user-select: none;
+            background: #ECECEC; border-radius: 10px 10px 0 0; transition: background 0.15s;
+        }
+        .step-card-header:hover { background: #E0E0E0; }
+        .step-card-header .chevron {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 16px; height: 16px; transition: transform 0.2s ease;
+            color: #666; transform: rotate(90deg); flex-shrink: 0;
+        }
+        .step-card-header .chevron.collapsed { transform: rotate(0deg); }
+        .step-card-header .step-title {
+            flex: 1; font-size: 12px; font-weight: 600; color: #333;
+        }
+        .step-card-header .step-badge {
+            font-size: 10px; padding: 2px 8px; border-radius: 10px; font-weight: 500; color: white;
+        }
+        .step-badge-pending { background: #9E9E9E; }
+        .step-badge-running { background: #3B82F6; }
+        .step-badge-done { background: #22C55E; }
+        .step-card-body { overflow: hidden; }
+        .step-card-body.hidden { display: none; }
+        .step-progress-bar { height: 2px; background: #DDD; overflow: hidden; }
+        .step-progress-fill {
+            height: 100%; transition: width 0.4s ease;
+            background: linear-gradient(90deg, #3B82F6, #60A5FA);
+        }
+        .step-progress-fill.done { background: linear-gradient(90deg, #22C55E, #4ADE80); }
+
+        /* Sub-tasks inside step card */
+        .sub-task-list { padding: 4px 0; }
+        .sub-task {
+            display: flex; align-items: center; gap: 10px;
+            padding: 5px 14px; font-size: 12px; line-height: 1.5;
+            color: #444; cursor: pointer; transition: background 0.15s;
+        }
+        .sub-task:hover { background: #EBEBEB; }
+        .sub-task-icon {
+            flex-shrink: 0; width: 18px; height: 18px;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .sub-task-text { flex: 1; }
+        .sub-task.done .sub-task-text { color: #999; text-decoration: line-through; }
+        .sub-task.running { background: rgba(59,130,246,0.06); }
+        .sub-task.running .sub-task-text { color: #2563EB; font-weight: 500; }
+        .sub-task-status { font-size: 10px; color: #999; flex-shrink: 0; }
+        .sub-task.running .sub-task-status { color: #2563EB; }
+
+        /* Step reply (completion detail) */
+        .step-reply {
+            max-height: 0; overflow: hidden; padding: 0 14px;
+            font-size: 11px; color: #555; line-height: 1.7;
+            background: #EDEDED; transition: max-height 0.25s ease, padding 0.25s ease;
+            white-space: pre-wrap; word-break: break-word;
+        }
+        .step-reply.show { max-height: none; padding: 8px 14px; }
+
+        /* Thinking animation inside step card */
+        .step-thinking {
+            display: flex; align-items: center; gap: 8px;
+            padding: 8px 14px; font-size: 11px; color: #3B82F6;
+        }
+        .thinking-dots { display: flex; gap: 3px; }
+        .thinking-dots .td {
+            width: 5px; height: 5px; border-radius: 50%; background: #3B82F6;
+            animation: bounce 1.4s infinite ease-in-out;
+        }
+        .thinking-dots .td:nth-child(2) { animation-delay: 0.2s; }
+        .thinking-dots .td:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .spinner {
+            display: inline-block; width: 14px; height: 14px;
+            border: 2px solid #DDD; border-top-color: #3B82F6;
+            border-radius: 50%; animation: spin 0.8s linear infinite;
+        }
+        .sub-task-wrap { animation: stepSlideIn 0.35s ease forwards; }
+        @keyframes stepSlideIn {
+            from { opacity: 0; transform: translateX(-8px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        /* Messages */
+        .msg { display: flex; gap: 8px; max-width: 92%; animation: fadeIn 0.3s ease; }
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(6px); }
             to { opacity: 1; transform: translateY(0); }
@@ -251,9 +238,7 @@
             background: white; color: var(--text-dark);
             border-bottom-left-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.06);
         }
-        .msg.user .msg-bubble {
-            background: var(--primary); color: white; border-bottom-right-radius: 4px;
-        }
+        .msg.user .msg-bubble { background: var(--primary); color: white; border-bottom-right-radius: 4px; }
         .typing .msg-bubble { display: flex; gap: 4px; align-items: center; padding: 14px 18px; }
         .dot {
             width: 7px; height: 7px; border-radius: 50%; background: var(--primary);
@@ -269,42 +254,31 @@
 
         /* Input Area */
         .input-area {
-            padding: 12px 16px; background: white;
-            border-top: 1px solid var(--border); flex-shrink: 0;
+            padding: 12px 16px; background: white; border-top: 1px solid var(--border); flex-shrink: 0;
         }
         .input-row { display: flex; gap: 8px; align-items: flex-end; }
         .chat-input {
             flex: 1; border: 2px solid var(--primary-light); border-radius: 18px;
             padding: 8px 14px; font-size: 13px; outline: none; resize: none;
-            max-height: 80px; min-height: 36px; font-family: inherit;
-            transition: border-color 0.2s;
+            max-height: 80px; min-height: 36px; font-family: inherit; transition: border-color 0.2s;
         }
         .chat-input:focus { border-color: var(--primary); }
         .send-btn {
-            width: 36px; height: 36px; border-radius: 50%;
-            background: var(--primary); color: white; border: none;
-            cursor: pointer; display: flex; align-items: center;
-            justify-content: center; font-size: 16px; flex-shrink: 0;
-            transition: all 0.2s;
+            width: 36px; height: 36px; border-radius: 50%; background: var(--primary); color: white;
+            border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;
+            font-size: 16px; flex-shrink: 0; transition: all 0.2s;
         }
         .send-btn:hover { background: var(--primary-dark); }
         .send-btn:disabled { background: #ccc; cursor: not-allowed; }
-        .input-toolbar {
-            display: flex; gap: 8px; margin-top: 6px;
-        }
+        .input-toolbar { display: flex; gap: 8px; margin-top: 6px; }
         .input-toolbar button {
-            background: none; border: none; color: #999; cursor: pointer;
-            font-size: 11px; padding: 2px 6px;
+            background: none; border: none; color: #999; cursor: pointer; font-size: 11px; padding: 2px 6px;
         }
         .input-toolbar button:hover { color: var(--primary); }
 
         /* Scrollbar */
-        .messages::-webkit-scrollbar,
-        .excel-content::-webkit-scrollbar,
-        .task-panel::-webkit-scrollbar { width: 6px; }
-        .messages::-webkit-scrollbar-thumb,
-        .excel-content::-webkit-scrollbar-thumb,
-        .task-panel::-webkit-scrollbar-thumb { background: #BDBDBD; border-radius: 3px; }
+        .messages::-webkit-scrollbar, .excel-content::-webkit-scrollbar { width: 6px; }
+        .messages::-webkit-scrollbar-thumb, .excel-content::-webkit-scrollbar-thumb { background: #BDBDBD; border-radius: 3px; }
 
         @media (max-width: 768px) {
             .chat-panel { width: 100%; }
@@ -323,8 +297,8 @@
             </svg>
         </div>
         <div>
-            <h1>Financial Report Volatility Analysis</h1>
-            <div class="subtitle">AI Intelligent Assistant - Spring AI Alibaba Graph Agent</div>
+            <h1>财报波动合理性分析</h1>
+            <div class="subtitle">AI智能助手 - Spring AI Alibaba Graph Agent</div>
         </div>
     </div>
 </div>
@@ -333,9 +307,9 @@
     <!-- Left: Excel Area -->
     <div class="excel-area">
         <div class="excel-toolbar">
-            <span class="toolbar-label">Online Data Worksheet</span>
+            <span class="toolbar-label">在线数据工作表</span>
             <span style="opacity:0.6">|</span>
-            <span>Financial Report Volatility Analysis Workspace</span>
+            <span>财报波动分析工作区</span>
         </div>
         <div class="excel-tab-bar" id="excelTabBar"></div>
         <div class="excel-content" id="excelContent">
@@ -345,45 +319,28 @@
                         <path d="M3 3h18v18H3z"/><path d="M3 9h18"/><path d="M3 15h18"/><path d="M9 3v18"/><path d="M15 3v18"/>
                     </svg>
                 </div>
-                <div class="ph-text">Online Data Worksheet</div>
-                <div class="ph-hint">Start a conversation on the right to trigger the workflow. Analysis data will be automatically displayed here.</div>
+                <div class="ph-text">在线数据工作表</div>
+                <div class="ph-hint">在右侧发起对话触发工作流，分析数据将自动展示在此处</div>
             </div>
         </div>
     </div>
 
     <!-- Right: Chat Panel -->
     <div class="chat-panel">
-        <!-- Task Planning -->
-        <div class="task-panel" id="taskPanel">
-            <div class="task-header" id="taskHeader">
-                <div class="task-title">
-                    <span>Task Plan</span>
-                    <span class="task-badge" id="taskBadge">Pending 0/8</span>
-                </div>
-                <span class="task-toggle" id="taskToggle">&#9660;</span>
-            </div>
-            <div class="task-list" id="taskList"></div>
-        </div>
-
-        <!-- Quick Actions -->
         <div class="quick-actions">
-            <button class="quick-btn" onclick="sendQuick('Please help me analyze the cash flow report for volatility reasonability')">Cash Flow Analysis</button>
-            <button class="quick-btn" onclick="sendQuick('Please help me check the balance sheet volatility')">Balance Sheet Check</button>
-            <button class="quick-btn" onclick="sendQuick('Show all report items with volatility exceeding 20%')">Anomaly Screening</button>
+            <button class="quick-btn" onclick="sendQuick('请帮我对现金流报表进行波动合理性分析')">现金流分析</button>
+            <button class="quick-btn" onclick="sendQuick('请帮我检查资产负债表的波动情况')">资产负债表检查</button>
+            <button class="quick-btn" onclick="sendQuick('显示所有波动超过20%的报表项')">异常筛查</button>
         </div>
-
-        <!-- Messages -->
         <div class="messages" id="messages"></div>
-
-        <!-- Input -->
         <div class="input-area">
             <div class="input-row">
-                <textarea class="chat-input" id="chatInput" placeholder="Enter message, e.g.: Please help me analyze the cash flow report..." rows="1"></textarea>
+                <textarea class="chat-input" id="chatInput" placeholder="请输入消息，例如：请帮我对现金流报表进行波动合理性分析..." rows="1"></textarea>
                 <button class="send-btn" id="sendBtn" onclick="sendMessage()">&#10148;</button>
             </div>
             <div class="input-toolbar">
-                <button onclick="clearChat()">Clear</button>
-                <button onclick="newSession()">+ New Session</button>
+                <button onclick="clearChat()">清空对话</button>
+                <button onclick="newSession()">+ 新会话</button>
                 <span style="margin-left:auto;color:#ccc;font-size:11px" id="sessionInfo"></span>
             </div>
         </div>
@@ -394,28 +351,44 @@
 const API = '';
 let sessionId = null;
 let isLoading = false;
-let taskCollapsed = false;
 
-// Task definitions
-const TASKS = [
-    { id: 'step1', text: 'Step 1: Retrieve EFM report data and calculate volatility', status: 'pending', detail: '' },
-    { id: 'step2', text: 'Step 2: Retrieve DCF010102 detail data', status: 'pending', detail: '' },
-    { id: 'step3_1', text: 'Step 3.1: Retrieve equity info and mark 8 tiers', status: 'pending', detail: '' },
-    { id: 'step3_2', text: 'Step 3.2: Associate detail data and mark tiers', status: 'pending', detail: '' },
-    { id: 'step3_3', text: 'Step 3.3: Update SR6 data IC tier', status: 'pending', detail: '' },
-    { id: 'step3_4', text: 'Step 3.4: Filter and create processed data', status: 'pending', detail: '' },
-    { id: 'step4', text: 'Step 4: Verify detail data reasonability', status: 'pending', detail: '' },
-    { id: 'step5', text: 'Step 5: Aggregate by simplified scenario and analyze volatility', status: 'pending', detail: '' }
+const ICON_PENDING = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="#555" stroke-width="1.5"/></svg>';
+const ICON_DONE = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" fill="#22C55E"/><path d="M5 8l2 2 4-4" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const ICON_SPINNER = '<span class="spinner"></span>';
+
+// 5 major steps, each with sub-tasks
+const STEPS = [
+    { id: 'step1', title: '第一步：获取EFM报表数据并计算波动值', subs: [
+        { id: 'step1', text: '读取系统报表数据并计算波动比例' }
+    ]},
+    { id: 'step2', title: '第二步：获取DCF010201明细数据', subs: [
+        { id: 'step2', text: '提取波动超20%报表项的明细数据' }
+    ]},
+    { id: 'step3', title: '第三步：数据处理与层级标注', subs: [
+        { id: 'step3_1', text: '3.1 获取股权信息并标注8大分层' },
+        { id: 'step3_2', text: '3.2 关联明细数据标注层级' },
+        { id: 'step3_3', text: '3.3 更新SR6数据的IC层级' },
+        { id: 'step3_4', text: '3.4 过滤并创建处理后数据' }
+    ]},
+    { id: 'step4', title: '第四步：校验明细数据合理性', subs: [
+        { id: 'step4', text: '明细数据与报表数据一致性校验' }
+    ]},
+    { id: 'step5', title: '第五步：按简化场景汇聚并分析波动', subs: [
+        { id: 'step5', text: '生成波动分析结论' }
+    ]}
 ];
 
-// Excel sheets data
+// Track state per step card
+let stepCardStates = {};
+let workflowStarted = false;
+
+// Excel
 let sheets = [];
 let activeSheet = 0;
 
 // ==================== Init ====================
 document.addEventListener('DOMContentLoaded', () => {
     loadWelcome();
-    document.getElementById('taskHeader').addEventListener('click', toggleTasks);
     document.getElementById('chatInput').addEventListener('keydown', e => {
         if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
     });
@@ -425,63 +398,204 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
-// ==================== Task Plan ====================
-function showTaskPanel() {
-    document.getElementById('taskPanel').style.display = 'block';
-    renderTasks();
-}
-
-function toggleTasks() {
-    taskCollapsed = !taskCollapsed;
-    document.getElementById('taskList').classList.toggle('hidden', taskCollapsed);
-    document.getElementById('taskToggle').classList.toggle('collapsed', taskCollapsed);
-}
-
-function renderTasks() {
-    const done = TASKS.filter(t => t.status === 'completed').length;
-    const badge = document.getElementById('taskBadge');
-    if (done === TASKS.length) {
-        badge.textContent = 'All Complete!';
-        badge.style.background = '#4CAF50';
-    } else {
-        badge.textContent = `Pending ${TASKS.length - done}/${TASKS.length}`;
-        badge.style.background = '';
-    }
-    document.getElementById('taskList').innerHTML = TASKS.map(t => {
-        let icon, cls, status;
-        if (t.status === 'completed') { icon = '<span style="color:#4CAF50">&#10003;</span>'; cls = 'done'; status = 'Done'; }
-        else if (t.status === 'active') { icon = '<span class="spinner"></span>'; cls = 'running'; status = 'Executing...'; }
-        else { icon = '<span style="color:#BDBDBD">&#9675;</span>'; cls = ''; status = 'Pending'; }
-        return `
-            <div class="task-item ${cls}" onclick="toggleDetail('${t.id}')">
-                <div class="task-icon">${icon}</div>
-                <div class="task-text">${esc(t.text)}</div>
-                <div class="task-status-text">${status}</div>
+// ==================== Step Cards ====================
+function createStepCard(step, idx) {
+    const c = document.getElementById('messages');
+    const card = document.createElement('div');
+    card.className = 'step-card';
+    card.id = 'sc-' + step.id;
+    card.innerHTML = `
+        <div class="step-card-header" onclick="toggleStepCard('${step.id}')">
+            <span class="chevron" id="chev-${step.id}">
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="4 2 8 6 4 10"/></svg>
+            </span>
+            <span class="step-title">${esc(step.title)}</span>
+            <span class="step-badge step-badge-pending" id="badge-${step.id}">待执行</span>
+        </div>
+        <div class="step-progress-bar"><div class="step-progress-fill" id="prog-${step.id}" style="width:0%"></div></div>
+        <div class="step-card-body" id="body-${step.id}">
+            <div class="sub-task-list" id="subs-${step.id}"></div>
+            <div class="step-thinking" id="think-${step.id}" style="display:none">
+                <div class="thinking-dots"><div class="td"></div><div class="td"></div><div class="td"></div></div>
+                <span id="think-text-${step.id}">正在思考...</span>
             </div>
-            <div class="task-detail ${t.detail && t.status === 'completed' ? 'show' : ''}" id="td-${t.id}">${esc(t.detail)}</div>
+            <div class="step-reply" id="reply-${step.id}"></div>
+        </div>
+    `;
+    c.appendChild(card);
+    stepCardStates[step.id] = { collapsed: false, subsRevealed: 0 };
+}
+
+function toggleStepCard(stepId) {
+    const st = stepCardStates[stepId];
+    if (!st) return;
+    st.collapsed = !st.collapsed;
+    const body = document.getElementById('body-' + stepId);
+    const chev = document.getElementById('chev-' + stepId);
+    if (body) body.classList.toggle('hidden', st.collapsed);
+    if (chev) chev.classList.toggle('collapsed', st.collapsed);
+}
+
+async function revealSubTasks(step) {
+    const subsEl = document.getElementById('subs-' + step.id);
+    const thinkEl = document.getElementById('think-' + step.id);
+    const thinkText = document.getElementById('think-text-' + step.id);
+    if (thinkEl) { thinkEl.style.display = ''; thinkText.textContent = '正在规划子任务...'; }
+    scrollChat();
+    for (let i = 0; i < step.subs.length; i++) {
+        await delay(800 + Math.random() * 400);
+        const sub = step.subs[i];
+        const wrap = document.createElement('div');
+        wrap.className = 'sub-task-wrap';
+        wrap.innerHTML = `
+            <div class="sub-task" id="sub-${sub.id}">
+                <div class="sub-task-icon" id="sicon-${sub.id}">${ICON_PENDING}</div>
+                <div class="sub-task-text">${esc(sub.text)}</div>
+                <div class="sub-task-status" id="sst-${sub.id}"></div>
+            </div>
         `;
-    }).join('');
+        subsEl.appendChild(wrap);
+        scrollChat();
+    }
+    if (thinkEl) thinkEl.style.display = 'none';
 }
 
-function toggleDetail(id) {
-    const el = document.getElementById('td-' + id);
-    if (el) el.classList.toggle('show');
+function updateStepBadge(stepId, status) {
+    const badge = document.getElementById('badge-' + stepId);
+    if (!badge) return;
+    if (status === 'running') { badge.textContent = '执行中'; badge.className = 'step-badge step-badge-running'; }
+    else if (status === 'done') { badge.textContent = '已完成'; badge.className = 'step-badge step-badge-done'; }
+    else { badge.textContent = '待执行'; badge.className = 'step-badge step-badge-pending'; }
 }
 
-function updateTask(id, status, detail) {
-    const t = TASKS.find(x => x.id === id);
-    if (t) { t.status = status; if (detail) t.detail = detail; renderTasks(); }
+function updateStepProgress(stepId, pct, done) {
+    const prog = document.getElementById('prog-' + stepId);
+    if (prog) {
+        prog.style.width = pct + '%';
+        prog.className = 'step-progress-fill' + (done ? ' done' : '');
+    }
+}
+
+function setSubTaskStatus(subId, status) {
+    const icon = document.getElementById('sicon-' + subId);
+    const el = document.getElementById('sub-' + subId);
+    const st = document.getElementById('sst-' + subId);
+    if (!icon) return;
+    if (status === 'running') {
+        icon.innerHTML = ICON_SPINNER; el.className = 'sub-task running'; st.textContent = '执行中...';
+    } else if (status === 'done') {
+        icon.innerHTML = ICON_DONE; el.className = 'sub-task done'; st.textContent = '已完成';
+    } else {
+        icon.innerHTML = ICON_PENDING; el.className = 'sub-task'; st.textContent = '';
+    }
+}
+
+function showStepReply(stepId, text) {
+    const el = document.getElementById('reply-' + stepId);
+    if (el) { el.textContent = text; el.classList.add('show'); }
+    scrollChat();
+}
+
+function showStepThinking(stepId, text) {
+    const thinkEl = document.getElementById('think-' + stepId);
+    const thinkText = document.getElementById('think-text-' + stepId);
+    if (thinkEl) { thinkEl.style.display = ''; thinkText.textContent = text || '正在执行...'; }
+    scrollChat();
+}
+
+function hideStepThinking(stepId) {
+    const thinkEl = document.getElementById('think-' + stepId);
+    if (thinkEl) thinkEl.style.display = 'none';
+}
+
+// ==================== Workflow orchestration ====================
+async function startWorkflow() {
+    if (workflowStarted) return;
+    workflowStarted = true;
+    await executeWorkflowSteps();
+}
+
+async function executeWorkflowSteps() {
+    for (let i = 0; i < STEPS.length; i++) {
+        const step = STEPS[i];
+        // 1. Create this step card (user sees it for the first time)
+        await delay(600 + Math.random() * 400);
+        createStepCard(step, i);
+        scrollChat();
+
+        // 2. Activate card and reveal sub-tasks with thinking
+        updateStepBadge(step.id, 'running');
+        await revealSubTasks(step);
+
+        // 3. Execute all sub-tasks of this step
+        for (const sub of step.subs) {
+            setSubTaskStatus(sub.id, 'running');
+            showStepThinking(step.id, '正在执行...');
+            scrollChat();
+
+            // Simulate thinking 1-2s
+            await delay(1200 + Math.random() * 800);
+
+            // Call backend
+            try {
+                const r = await fetch(`${API}/api/finance/execute-step`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ sessionId, stepId: sub.id })
+                });
+                const d = await r.json();
+
+                hideStepThinking(step.id);
+                setSubTaskStatus(sub.id, 'done');
+
+                // Handle excel with loading
+                if (d.excelOperations) {
+                    for (const op of d.excelOperations) {
+                        if (op.action === 'addSheet') await addSheetWithLoading(op.sheetName, op.headers, op.rows);
+                        else if (op.action === 'updateSheet') {
+                            showExcelLoading('正在更新数据...');
+                            await delay(800);
+                            updateSheetDirect(op.sheetIndex, op.headers, op.rows, op.append);
+                            hideExcelLoading();
+                        }
+                    }
+                }
+
+                // Update progress
+                const doneSubs = step.subs.filter(s => {
+                    const el = document.getElementById('sub-' + s.id);
+                    return el && el.classList.contains('done');
+                }).length;
+                const pct = Math.round((doneSubs / step.subs.length) * 100);
+                updateStepProgress(step.id, pct, doneSubs === step.subs.length);
+
+                // If last sub, mark step done and show reply
+                if (sub.id === step.subs[step.subs.length - 1].id) {
+                    updateStepBadge(step.id, 'done');
+                    if (d.stepReply) showStepReply(step.id, d.stepReply);
+                }
+
+                scrollChat();
+            } catch {
+                hideStepThinking(step.id);
+                addMsg('bot', '工作流步骤执行出错，请重试。');
+                return;
+            }
+        }
+    }
 }
 
 // ==================== Excel ====================
-function addSheet(name, headers, rows) {
+async function addSheetWithLoading(name, headers, rows) {
+    showExcelLoading('正在创建 ' + name + '...');
+    await delay(1200 + Math.random() * 800);
     sheets.push({ name, headers, rows });
     activeSheet = sheets.length - 1;
-    renderTabs();
-    renderSheet();
+    renderTabs(); renderSheet();
+    hideExcelLoading();
 }
 
-function updateSheet(index, headers, rows, append) {
+function updateSheetDirect(index, headers, rows, append) {
     if (index < 0 || index >= sheets.length) return;
     const s = sheets[index];
     if (append) {
@@ -492,10 +606,27 @@ function updateSheet(index, headers, rows, append) {
             newH.forEach(h => { nr[h] = rows[i] ? rows[i][h] || '' : ''; });
             return nr;
         });
-    } else {
-        s.headers = headers; s.rows = rows;
-    }
+    } else { s.headers = headers; s.rows = rows; }
     if (activeSheet === index) renderSheet();
+}
+
+function showExcelLoading(text) {
+    const el = document.getElementById('excelContent');
+    let loader = document.getElementById('excelLoader');
+    if (!loader) {
+        loader = document.createElement('div');
+        loader.className = 'excel-loading';
+        loader.id = 'excelLoader';
+        loader.innerHTML = '<div class="excel-loading-spinner"></div><div class="excel-loading-text" id="excelLoadingText"></div>';
+        el.appendChild(loader);
+    }
+    document.getElementById('excelLoadingText').textContent = text || '加载中...';
+    loader.style.display = '';
+}
+
+function hideExcelLoading() {
+    const loader = document.getElementById('excelLoader');
+    if (loader) loader.style.display = 'none';
 }
 
 function renderTabs() {
@@ -509,7 +640,7 @@ function switchTab(i) { activeSheet = i; renderTabs(); renderSheet(); }
 function renderSheet() {
     const el = document.getElementById('excelContent');
     if (!sheets.length) {
-        el.innerHTML = '<div class="excel-placeholder"><div class="ph-icon"><svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#B0BEC5" stroke-width="1"><path d="M3 3h18v18H3z"/><path d="M3 9h18"/><path d="M3 15h18"/><path d="M9 3v18"/><path d="M15 3v18"/></svg></div><div class="ph-text">Online Data Worksheet</div><div class="ph-hint">Start a conversation on the right to trigger the workflow</div></div>';
+        el.innerHTML = '<div class="excel-placeholder"><div class="ph-icon"><svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#B0BEC5" stroke-width="1"><path d="M3 3h18v18H3z"/><path d="M3 9h18"/><path d="M3 15h18"/><path d="M9 3v18"/><path d="M15 3v18"/></svg></div><div class="ph-text">在线数据工作表</div><div class="ph-hint">在右侧发起对话触发工作流</div></div>';
         return;
     }
     const s = sheets[activeSheet];
@@ -519,8 +650,9 @@ function renderSheet() {
         s.headers.forEach(hd => {
             const v = row[hd] !== undefined ? String(row[hd]) : '';
             let cls = '';
-            if (hd === 'Is Volatility > 20%' && v === 'Yes') cls = 'cell-red';
-            if (hd === 'Is Volatility > 20%' && v === 'No') cls = 'cell-green';
+            if (hd === '是否波动超20%' && v === '是') cls = 'cell-red';
+            if (hd === '是否波动超20%' && v === '否') cls = 'cell-green';
+            if (hd === '波动分析结论') cls = 'cell-conclusion';
             h += `<td class="${cls}">${esc(v)}</td>`;
         });
         h += '</tr>';
@@ -550,6 +682,8 @@ function showTyping() {
 function hideTyping() { const e = document.getElementById('typing'); if (e) e.remove(); }
 
 function esc(t) { const d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
+function scrollChat() { const c = document.getElementById('messages'); c.scrollTop = c.scrollHeight; }
+function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 async function loadWelcome() {
     try {
@@ -557,7 +691,7 @@ async function loadWelcome() {
         const d = await r.json();
         addMsg('bot', d.message);
     } catch {
-        addMsg('bot', 'Welcome! I am the Financial Report Volatility Analysis Intelligent Assistant. I can help you analyze the reasonability of report item volatility. Please tell me which report you would like to analyze.');
+        addMsg('bot', '您好！我是财报波动合理性分析智能助手。我可以帮您分析报表项波动的合理性，包括现金流量表、资产负债表等。请告诉我您想分析哪份报表？');
     }
 }
 
@@ -583,58 +717,28 @@ async function sendMessage() {
         });
         const d = await r.json();
         sessionId = d.sessionId;
-        document.getElementById('sessionInfo').textContent = `Session: ${sessionId.substring(0, 8)}...`;
+        document.getElementById('sessionInfo').textContent = `会话: ${sessionId.substring(0, 8)}...`;
         hideTyping();
         addMsg('bot', d.reply);
-        if (d.workflowActive) showTaskPanel();
-        handleResponse(d);
-        if (d.nextStep) { await delay(500); await execStep(d.nextStep); }
+        if (d.workflowActive) {
+            await startWorkflow();
+        }
     } catch {
         hideTyping();
-        addMsg('bot', 'Connection failed. Please ensure backend is running on localhost:9000.');
+        addMsg('bot', '连接失败，请确认后端服务已在 localhost:9000 启动。');
     } finally {
         isLoading = false;
         document.getElementById('sendBtn').disabled = false;
     }
 }
 
-function handleResponse(d) {
-    if (d.taskUpdates) d.taskUpdates.forEach(u => updateTask(u.taskId, u.status, u.detail));
-    if (d.excelOperations) d.excelOperations.forEach(op => {
-        if (op.action === 'addSheet') addSheet(op.sheetName, op.headers, op.rows);
-        else if (op.action === 'updateSheet') updateSheet(op.sheetIndex, op.headers, op.rows, op.append);
-    });
-}
-
-async function execStep(stepId) {
-    isLoading = true;
-    showTyping();
-    try {
-        const r = await fetch(`${API}/api/finance/execute-step`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ sessionId, stepId })
-        });
-        const d = await r.json();
-        hideTyping();
-        if (d.reply) addMsg('bot', d.reply);
-        handleResponse(d);
-        if (d.nextStep) { await delay(800); await execStep(d.nextStep); }
-    } catch {
-        hideTyping();
-        addMsg('bot', 'Workflow step execution error.');
-    } finally { isLoading = false; }
-}
-
-function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
-
 async function clearChat() {
     if (sessionId) {
         try { await fetch(`${API}/api/finance/clear`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sessionId }) }); } catch {}
     }
     document.getElementById('messages').innerHTML = '';
-    TASKS.forEach(t => { t.status = 'pending'; t.detail = ''; });
-    document.getElementById('taskPanel').style.display = 'none';
+    workflowStarted = false;
+    stepCardStates = {};
     sheets = []; activeSheet = 0;
     renderSheet(); document.getElementById('excelTabBar').innerHTML = '';
     loadWelcome();
