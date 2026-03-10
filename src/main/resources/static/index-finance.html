@@ -114,21 +114,19 @@
             display: flex; flex-direction: column; gap: 12px;
         }
 
-        /* Task Plan - persistent panel */
-        .task-panel {
-            flex-shrink: 0; border-bottom: 1px solid #333;
-            animation: fadeIn 0.3s ease;
-        }
+        /* Task Plan Card - in chat, Claude Code style */
         .task-card {
-            background: #1E1E1E;
-            overflow: hidden; font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+            background: #1B1B1B; border-radius: 10px; overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+            width: 100%; animation: fadeIn 0.3s ease;
         }
         .task-card-header {
             display: flex; align-items: center; justify-content: space-between;
             padding: 10px 14px; cursor: pointer; user-select: none;
-            background: #2D2D2D; transition: background 0.15s;
+            background: #252525; transition: background 0.15s;
         }
-        .task-card-header:hover { background: #363636; }
+        .task-card-header:hover { background: #303030; }
         .task-card-title {
             font-size: 12px; font-weight: 600; color: #E0E0E0;
             display: flex; align-items: center; gap: 8px;
@@ -142,58 +140,68 @@
         .task-badge {
             font-size: 10px; background: #3B82F6; color: white;
             padding: 2px 8px; border-radius: 10px; font-weight: 500;
-            letter-spacing: 0.3px;
         }
         .task-badge.all-done { background: #22C55E; }
-        .task-progress-bar {
-            height: 2px; background: #333; overflow: hidden;
-        }
+        .task-progress-bar { height: 2px; background: #333; overflow: hidden; }
         .task-progress-fill {
             height: 100%; background: linear-gradient(90deg, #3B82F6, #60A5FA);
             transition: width 0.4s ease;
         }
         .task-progress-fill.all-done { background: linear-gradient(90deg, #22C55E, #4ADE80); }
-        .task-list {
-            padding: 6px 0;
-            max-height: 600px; overflow-y: auto; transition: max-height 0.3s ease, opacity 0.2s ease, padding 0.3s ease;
-            opacity: 1;
+        .task-body {
+            transition: max-height 0.3s ease, opacity 0.2s ease;
+            max-height: 2000px; opacity: 1; overflow: hidden;
         }
-        .task-list.hidden { max-height: 0; opacity: 0; padding: 0; overflow: hidden; }
+        .task-body.hidden { max-height: 0; opacity: 0; }
+        .task-list { padding: 4px 0; }
         .task-item {
             display: flex; align-items: center; gap: 10px;
-            padding: 6px 14px; font-size: 12px;
-            line-height: 1.5; transition: background 0.15s; cursor: pointer;
-            color: #CCC; position: relative;
+            padding: 5px 14px; font-size: 12px; line-height: 1.5;
+            color: #CCC; cursor: pointer; transition: background 0.15s;
         }
-        .task-item:hover { background: #2A2A2A; }
+        .task-item:hover { background: #252525; }
         .task-icon {
             flex-shrink: 0; width: 18px; height: 18px;
             display: flex; align-items: center; justify-content: center;
-            font-size: 13px;
         }
-        .task-icon .icon-pending { color: #555; }
-        .task-icon .icon-done { color: #22C55E; }
         .task-text { flex: 1; }
         .task-item.done .task-text { color: #666; text-decoration: line-through; }
         .task-item.running { background: rgba(59,130,246,0.08); }
         .task-item.running .task-text { color: #60A5FA; font-weight: 500; }
-        .task-status-text { font-size: 10px; color: #555; flex-shrink: 0; padding-right: 2px; }
+        .task-status-text { font-size: 10px; color: #555; flex-shrink: 0; }
         .task-item.running .task-status-text { color: #60A5FA; }
-        .task-item.done .task-status-text { color: #555; }
         @keyframes spin { to { transform: rotate(360deg); } }
         .spinner {
             display: inline-block; width: 14px; height: 14px;
             border: 2px solid #333; border-top-color: #60A5FA;
             border-radius: 50%; animation: spin 0.8s linear infinite;
         }
-        .task-detail {
+        /* Step detail / reply area inside card */
+        .task-step-reply {
             max-height: 0; overflow: hidden; padding: 0 14px 0 42px;
-            font-size: 11px; color: #888; line-height: 1.6;
-            background: #1A1A1A; transition: max-height 0.25s ease, padding 0.25s ease;
+            font-size: 11px; color: #999; line-height: 1.6;
+            background: #161616; transition: max-height 0.25s ease, padding 0.25s ease;
+            white-space: pre-wrap; word-break: break-word;
         }
-        .task-detail.show { max-height: 120px; padding: 6px 14px 6px 42px; }
-        .task-list::-webkit-scrollbar { width: 4px; }
-        .task-list::-webkit-scrollbar-thumb { background: #444; border-radius: 2px; }
+        .task-step-reply.show { max-height: 200px; padding: 6px 14px 6px 42px; overflow-y: auto; }
+        /* Planning thinking animation */
+        .task-thinking {
+            display: flex; align-items: center; gap: 8px;
+            padding: 8px 14px; font-size: 11px; color: #60A5FA;
+        }
+        .task-thinking-dots { display: flex; gap: 3px; }
+        .task-thinking-dots .td {
+            width: 5px; height: 5px; border-radius: 50%; background: #60A5FA;
+            animation: bounce 1.4s infinite ease-in-out;
+        }
+        .task-thinking-dots .td:nth-child(2) { animation-delay: 0.2s; }
+        .task-thinking-dots .td:nth-child(3) { animation-delay: 0.4s; }
+        /* Step appear animation */
+        .task-step-wrap { animation: stepSlideIn 0.35s ease forwards; }
+        @keyframes stepSlideIn {
+            from { opacity: 0; transform: translateX(-8px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
 
         /* Messages */
         .msg { display: flex; gap: 8px; max-width: 92%; animation: fadeIn 0.3s ease; }
@@ -313,24 +321,7 @@
             <button class="quick-btn" onclick="sendQuick('显示所有波动超过20%的报表项')">异常筛查</button>
         </div>
 
-        <!-- Task Plan - persistent collapsible panel -->
-        <div class="task-panel" id="taskPanel" style="display:none">
-            <div class="task-card">
-                <div class="task-card-header" onclick="toggleTasks()">
-                    <div class="task-card-title">
-                        <span class="chevron" id="taskChevron">
-                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="4 2 8 6 4 10"/></svg>
-                        </span>
-                        <span>任务规划</span>
-                        <span class="task-badge" id="taskBadge">0/8</span>
-                    </div>
-                </div>
-                <div class="task-progress-bar"><div class="task-progress-fill" id="taskProgressFill" style="width:0%"></div></div>
-                <div class="task-list" id="taskList"></div>
-            </div>
-        </div>
-
-        <!-- Messages -->
+        <!-- Messages (task plan card will be inserted here) -->
         <div class="messages" id="messages"></div>
 
         <!-- Input -->
@@ -353,18 +344,19 @@ const API = '';
 let sessionId = null;
 let isLoading = false;
 let taskCollapsed = false;
-let taskPanelInserted = false;
+let taskCardInserted = false;
+let revealedSteps = 0;
 
 // Task definitions
 const TASKS = [
-    { id: 'step1', text: '第一步：获取EFM报表数据并计算波动值', status: 'pending', detail: '' },
-    { id: 'step2', text: '第二步：获取DCF010102明细数据', status: 'pending', detail: '' },
-    { id: 'step3_1', text: '第三步-3.1：获取股权信息并标注8大分层', status: 'pending', detail: '' },
-    { id: 'step3_2', text: '第三步-3.2：关联明细数据标注层级', status: 'pending', detail: '' },
-    { id: 'step3_3', text: '第三步-3.3：更新SR6数据的IC层级', status: 'pending', detail: '' },
-    { id: 'step3_4', text: '第三步-3.4：过滤并创建处理后数据', status: 'pending', detail: '' },
-    { id: 'step4', text: '第四步：校验明细数据合理性', status: 'pending', detail: '' },
-    { id: 'step5', text: '第五步：按简化场景汇聚并分析波动', status: 'pending', detail: '' }
+    { id: 'step1', text: '第一步：获取EFM报表数据并计算波动值', status: 'pending', reply: '' },
+    { id: 'step2', text: '第二步：获取DCF010102明细数据', status: 'pending', reply: '' },
+    { id: 'step3_1', text: '第三步-3.1：获取股权信息并标注8大分层', status: 'pending', reply: '' },
+    { id: 'step3_2', text: '第三步-3.2：关联明细数据标注层级', status: 'pending', reply: '' },
+    { id: 'step3_3', text: '第三步-3.3：更新SR6数据的IC层级', status: 'pending', reply: '' },
+    { id: 'step3_4', text: '第三步-3.4：过滤并创建处理后数据', status: 'pending', reply: '' },
+    { id: 'step4', text: '第四步：校验明细数据合理性', status: 'pending', reply: '' },
+    { id: 'step5', text: '第五步：按简化场景汇聚并分析波动', status: 'pending', reply: '' }
 ];
 
 // Excel sheets data
@@ -383,74 +375,145 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
-// ==================== Task Plan (Claude Code style, persistent panel) ====================
-function showTaskPanel() {
-    const panel = document.getElementById('taskPanel');
-    if (panel.style.display === 'none') panel.style.display = '';
-    taskPanelInserted = true;
-    renderTasks();
+// ==================== Task Plan (Claude Code style, inside chat) ====================
+
+// Build the icon SVGs
+const ICON_PENDING = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="#555" stroke-width="1.5"/></svg>';
+const ICON_DONE = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" fill="#22C55E"/><path d="M5 8l2 2 4-4" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const ICON_SPINNER = '<span class="spinner"></span>';
+
+function createTaskCard() {
+    if (taskCardInserted) return;
+    taskCardInserted = true;
+    revealedSteps = 0;
+    const c = document.getElementById('messages');
+    const card = document.createElement('div');
+    card.className = 'task-card';
+    card.id = 'taskCard';
+    card.innerHTML = `
+        <div class="task-card-header" onclick="toggleTaskCard()">
+            <div class="task-card-title">
+                <span class="chevron" id="taskChevron">
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="4 2 8 6 4 10"/></svg>
+                </span>
+                <span>任务规划</span>
+                <span class="task-badge" id="taskBadge">0/${TASKS.length}</span>
+            </div>
+        </div>
+        <div class="task-progress-bar"><div class="task-progress-fill" id="taskProgressFill" style="width:0%"></div></div>
+        <div class="task-body" id="taskBody">
+            <div class="task-list" id="taskList"></div>
+            <div class="task-thinking" id="taskThinking">
+                <div class="task-thinking-dots"><div class="td"></div><div class="td"></div><div class="td"></div></div>
+                <span>正在规划任务...</span>
+            </div>
+        </div>
+    `;
+    c.appendChild(card);
+    scrollChat();
 }
 
-function toggleTasks() {
-    taskCollapsed = !taskCollapsed;
+// Reveal steps one by one with thinking animation
+async function revealStepsProgressively() {
+    const thinkingEl = document.getElementById('taskThinking');
+    for (let i = 0; i < TASKS.length; i++) {
+        await delay(400 + Math.random() * 300);
+        revealedSteps = i + 1;
+        appendStepDOM(TASKS[i]);
+        updateBadge();
+        scrollChat();
+    }
+    if (thinkingEl) thinkingEl.style.display = 'none';
+}
+
+function appendStepDOM(t) {
     const list = document.getElementById('taskList');
+    if (!list) return;
+    const wrap = document.createElement('div');
+    wrap.className = 'task-step-wrap';
+    wrap.id = 'sw-' + t.id;
+    wrap.innerHTML = `
+        <div class="task-item" id="ti-${t.id}" onclick="toggleStepReply('${t.id}')">
+            <div class="task-icon" id="icon-${t.id}">${ICON_PENDING}</div>
+            <div class="task-text" id="txt-${t.id}">${esc(t.text)}</div>
+            <div class="task-status-text" id="st-${t.id}"></div>
+        </div>
+        <div class="task-step-reply" id="reply-${t.id}"></div>
+    `;
+    list.appendChild(wrap);
+}
+
+function toggleTaskCard() {
+    taskCollapsed = !taskCollapsed;
+    const body = document.getElementById('taskBody');
     const chevron = document.getElementById('taskChevron');
-    if (list) list.classList.toggle('hidden', taskCollapsed);
+    if (body) body.classList.toggle('hidden', taskCollapsed);
     if (chevron) chevron.classList.toggle('collapsed', taskCollapsed);
 }
 
-function renderTasks() {
+function toggleStepReply(id) {
+    const el = document.getElementById('reply-' + id);
+    if (el && el.textContent.trim()) el.classList.toggle('show');
+}
+
+function updateBadge() {
     const done = TASKS.filter(t => t.status === 'completed').length;
-    const total = TASKS.length;
-    const allDone = done === total;
-    const pct = total > 0 ? Math.round((done / total) * 100) : 0;
-
+    const visible = revealedSteps || TASKS.length;
+    const allDone = done === TASKS.length && revealedSteps === TASKS.length;
+    const pct = TASKS.length > 0 ? Math.round((done / TASKS.length) * 100) : 0;
     const badge = document.getElementById('taskBadge');
-    if (!badge) return;
-    badge.textContent = allDone ? '已完成' : `${done}/${total}`;
-    badge.className = 'task-badge' + (allDone ? ' all-done' : '');
-
+    if (badge) {
+        badge.textContent = allDone ? '已完成' : `${done}/${visible}`;
+        badge.className = 'task-badge' + (allDone ? ' all-done' : '');
+    }
     const progress = document.getElementById('taskProgressFill');
     if (progress) {
         progress.style.width = pct + '%';
         progress.className = 'task-progress-fill' + (allDone ? ' all-done' : '');
     }
-
-    const list = document.getElementById('taskList');
-    if (!list) return;
-    list.innerHTML = TASKS.map(t => {
-        let icon, cls, status;
-        if (t.status === 'completed') {
-            icon = '<span class="icon-done"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" fill="#22C55E"/><path d="M5 8l2 2 4-4" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>';
-            cls = 'done'; status = '已完成';
-        } else if (t.status === 'active') {
-            icon = '<span class="spinner"></span>';
-            cls = 'running'; status = '执行中...';
-        } else {
-            icon = '<span class="icon-pending"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="#555" stroke-width="1.5"/></svg></span>';
-            cls = ''; status = '';
-        }
-        const detailShow = t.detail && t.status === 'completed' ? 'show' : '';
-        return `
-            <div class="task-item ${cls}" onclick="toggleDetail('${t.id}', event)">
-                <div class="task-icon">${icon}</div>
-                <div class="task-text">${esc(t.text)}</div>
-                <div class="task-status-text">${status}</div>
-            </div>
-            <div class="task-detail ${detailShow}" id="td-${t.id}">${esc(t.detail)}</div>
-        `;
-    }).join('');
-}
-
-function toggleDetail(id, e) {
-    if (e) e.stopPropagation();
-    const el = document.getElementById('td-' + id);
-    if (el) el.classList.toggle('show');
 }
 
 function updateTask(id, status, detail) {
     const t = TASKS.find(x => x.id === id);
-    if (t) { t.status = status; if (detail) t.detail = detail; renderTasks(); }
+    if (!t) return;
+    t.status = status;
+    if (detail) t.reply = detail;
+    // Update DOM directly (no full re-render)
+    const iconEl = document.getElementById('icon-' + id);
+    const txtEl = document.getElementById('txt-' + id);
+    const stEl = document.getElementById('st-' + id);
+    const tiEl = document.getElementById('ti-' + id);
+    const replyEl = document.getElementById('reply-' + id);
+    if (!iconEl) return;
+    if (status === 'completed') {
+        iconEl.innerHTML = ICON_DONE;
+        tiEl.className = 'task-item done';
+        stEl.textContent = '已完成';
+        if (detail && replyEl) { replyEl.textContent = detail; replyEl.classList.add('show'); }
+    } else if (status === 'active') {
+        iconEl.innerHTML = ICON_SPINNER;
+        tiEl.className = 'task-item running';
+        stEl.textContent = '执行中...';
+    } else {
+        iconEl.innerHTML = ICON_PENDING;
+        tiEl.className = 'task-item';
+        stEl.textContent = '';
+    }
+    updateBadge();
+    scrollChat();
+}
+
+// Show task panel: create card + progressive reveal
+async function showTaskPanel() {
+    if (!taskCardInserted) {
+        createTaskCard();
+        await revealStepsProgressively();
+    }
+}
+
+function scrollChat() {
+    const c = document.getElementById('messages');
+    c.scrollTop = c.scrollHeight;
 }
 
 // ==================== Excel ====================
@@ -563,7 +626,9 @@ async function sendMessage() {
         document.getElementById('sessionInfo').textContent = `会话: ${sessionId.substring(0, 8)}...`;
         hideTyping();
         addMsg('bot', d.reply);
-        if (d.workflowActive) showTaskPanel();
+        if (d.workflowActive) {
+            await showTaskPanel();
+        }
         handleResponse(d);
         if (d.nextStep) { await delay(500); await execStep(d.nextStep); }
     } catch {
@@ -585,7 +650,6 @@ function handleResponse(d) {
 
 async function execStep(stepId) {
     isLoading = true;
-    showTyping();
     try {
         const r = await fetch(`${API}/api/finance/execute-step`, {
             method: 'POST',
@@ -593,12 +657,11 @@ async function execStep(stepId) {
             body: JSON.stringify({ sessionId, stepId })
         });
         const d = await r.json();
-        hideTyping();
-        if (d.reply) addMsg('bot', d.reply);
+        // Step replies go into task card, not as separate chat messages
         handleResponse(d);
+        scrollChat();
         if (d.nextStep) { await delay(800); await execStep(d.nextStep); }
     } catch {
-        hideTyping();
         addMsg('bot', '工作流步骤执行出错，请重试。');
     } finally { isLoading = false; }
 }
@@ -610,9 +673,10 @@ async function clearChat() {
         try { await fetch(`${API}/api/finance/clear`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sessionId }) }); } catch {}
     }
     document.getElementById('messages').innerHTML = '';
-    TASKS.forEach(t => { t.status = 'pending'; t.detail = ''; });
-    taskPanelInserted = false;
-    document.getElementById('taskPanel').style.display = 'none';
+    TASKS.forEach(t => { t.status = 'pending'; t.reply = ''; });
+    taskCardInserted = false;
+    revealedSteps = 0;
+    taskCollapsed = false;
     sheets = []; activeSheet = 0;
     renderSheet(); document.getElementById('excelTabBar').innerHTML = '';
     loadWelcome();
