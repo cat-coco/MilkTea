@@ -512,12 +512,76 @@ function hideStepThinking(stepId) {
 async function startWorkflow() {
     if (workflowStarted) return;
     workflowStarted = true;
+    await executeWorkflowSteps();
+}
 
-    // Create all 5 step cards with progressive reveal
+async function executeWorkflowSteps() {
     for (let i = 0; i < STEPS.length; i++) {
+        const step = STEPS[i];
+        // 1. Create this step card (user sees it for the first time)
         await delay(600 + Math.random() * 400);
-        createStepCard(STEPS[i], i);
+        createStepCard(step, i);
         scrollChat();
+
+        // 2. Activate card and reveal sub-tasks with thinking
+        updateStepBadge(step.id, 'running');
+        await revealSubTasks(step);
+
+        // 3. Execute all sub-tasks of this step
+        for (const sub of step.subs) {
+            setSubTaskStatus(sub.id, 'running');
+            showStepThinking(step.id, '正在执行...');
+            scrollChat();
+
+            // Simulate thinking 1-2s
+            await delay(1200 + Math.random() * 800);
+
+            // Call backend
+            try {
+                const r = await fetch(`${API}/api/finance/execute-step`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ sessionId, stepId: sub.id })
+                });
+                const d = await r.json();
+
+                hideStepThinking(step.id);
+                setSubTaskStatus(sub.id, 'done');
+
+                // Handle excel with loading
+                if (d.excelOperations) {
+                    for (const op of d.excelOperations) {
+                        if (op.action === 'addSheet') await addSheetWithLoading(op.sheetName, op.headers, op.rows);
+                        else if (op.action === 'updateSheet') {
+                            showExcelLoading('正在更新数据...');
+                            await delay(800);
+                            updateSheetDirect(op.sheetIndex, op.headers, op.rows, op.append);
+                            hideExcelLoading();
+                        }
+                    }
+                }
+
+                // Update progress
+                const doneSubs = step.subs.filter(s => {
+                    const el = document.getElementById('sub-' + s.id);
+                    return el && el.classList.contains('done');
+                }).length;
+                const pct = Math.round((doneSubs / step.subs.length) * 100);
+                updateStepProgress(step.id, pct, doneSubs === step.subs.length);
+
+                // If last sub, mark step done and show reply
+                if (sub.id === step.subs[step.subs.length - 1].id) {
+                    updateStepBadge(step.id, 'done');
+                    if (d.stepReply) showStepReply(step.id, d.stepReply);
+                }
+
+                scrollChat();
+            } catch {
+                hideStepThinking(step.id);
+                addMsg('bot', '工作流步骤执行出错，请重试。');
+                return;
+            }
+        }
     }
 }
 
@@ -658,8 +722,6 @@ async function sendMessage() {
         addMsg('bot', d.reply);
         if (d.workflowActive) {
             await startWorkflow();
-            // Begin executing steps
-            await executeWorkflowSteps();
         }
     } catch {
         hideTyping();
@@ -668,90 +730,6 @@ async function sendMessage() {
         isLoading = false;
         document.getElementById('sendBtn').disabled = false;
     }
-}
-
-async function executeWorkflowSteps() {
-    const stepFlow = ['step1', 'step2', 'step3_1', 'step3_2', 'step3_3', 'step3_4', 'step4', 'step5'];
-    for (const stepId of stepFlow) {
-        await executeOneStep(stepId);
-    }
-}
-
-async function executeOneStep(stepId) {
-    // Determine which major step card this belongs to
-    const majorStep = getMajorStep(stepId);
-    const step = STEPS.find(s => s.id === majorStep);
-    if (!step) return;
-
-    // If first sub of this major step, activate card and reveal subs
-    const isFirst = step.subs[0].id === stepId;
-    if (isFirst) {
-        updateStepBadge(majorStep, 'running');
-        await revealSubTasks(step);
-    }
-
-    // Show sub-task as running
-    setSubTaskStatus(stepId, 'running');
-    showStepThinking(majorStep, '正在执行...');
-    scrollChat();
-
-    // Simulate thinking delay 1-2s
-    await delay(1200 + Math.random() * 800);
-
-    // Call backend
-    try {
-        const r = await fetch(`${API}/api/finance/execute-step`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ sessionId, stepId })
-        });
-        const d = await r.json();
-
-        hideStepThinking(majorStep);
-        setSubTaskStatus(stepId, 'done');
-
-        // Handle excel with loading
-        if (d.excelOperations) {
-            for (const op of d.excelOperations) {
-                if (op.action === 'addSheet') await addSheetWithLoading(op.sheetName, op.headers, op.rows);
-                else if (op.action === 'updateSheet') {
-                    showExcelLoading('正在更新数据...');
-                    await delay(800);
-                    updateSheetDirect(op.sheetIndex, op.headers, op.rows, op.append);
-                    hideExcelLoading();
-                }
-            }
-        }
-
-        // Update step progress
-        const doneSubs = step.subs.filter(s => {
-            const el = document.getElementById('sub-' + s.id);
-            return el && el.classList.contains('done');
-        }).length;
-        const pct = Math.round((doneSubs / step.subs.length) * 100);
-        updateStepProgress(majorStep, pct, doneSubs === step.subs.length);
-
-        // If all subs done, mark major step done and show reply
-        const isLast = step.subs[step.subs.length - 1].id === stepId;
-        if (isLast) {
-            updateStepBadge(majorStep, 'done');
-            if (d.stepReply) showStepReply(majorStep, d.stepReply);
-        }
-
-        scrollChat();
-    } catch {
-        hideStepThinking(majorStep);
-        addMsg('bot', '工作流步骤执行出错，请重试。');
-    }
-}
-
-function getMajorStep(subId) {
-    if (subId === 'step1') return 'step1';
-    if (subId === 'step2') return 'step2';
-    if (subId.startsWith('step3')) return 'step3';
-    if (subId === 'step4') return 'step4';
-    if (subId === 'step5') return 'step5';
-    return subId;
 }
 
 async function clearChat() {
