@@ -81,15 +81,10 @@ public class FinanceChatController {
 
             reply = String.format("我来帮你完成%s的现金流报表的波动分析。"
                     + "我会提取报表数据、计算波动比例、标注异常波动（波动比例大于20%%），"
-                    + "并对明细数据进行提取及分析，最后输出报表分析结果。\n\n"
-                    + "现在我来执行第一步，提取系统现金流报表数据并计算波动比例及标注异常波动，插入在线Excel Sheet1。", state.entity);
+                    + "并对明细数据进行提取及分析，最后输出报表分析结果。", state.entity);
 
             result.put("reply", reply);
             result.put("workflowActive", true);
-            result.put("taskUpdates", List.of(
-                    Map.of("taskId", "step1", "status", "active", "detail", "正在获取" + state.entity + "报表数据...")
-            ));
-            result.put("nextStep", "step1");
 
         } else {
             try {
@@ -121,7 +116,7 @@ public class FinanceChatController {
         result.put("sessionId", sessionId);
 
         if (state == null) {
-            result.put("reply", "未找到活跃的工作流，请重新发起分析。");
+            result.put("stepReply", "未找到活跃的工作流，请重新发起分析。");
             return result;
         }
 
@@ -134,7 +129,7 @@ public class FinanceChatController {
             case "step3_4" -> executeStep3_4(state, result);
             case "step4" -> executeStep4(state, result);
             case "step5" -> executeStep5(state, result);
-            default -> result.put("reply", "未知步骤：" + stepId);
+            default -> result.put("stepReply", "未知步骤：" + stepId);
         }
 
         return result;
@@ -155,23 +150,15 @@ public class FinanceChatController {
                 createRow(headers, "DCF010402 管理费用", "10.50", "10.80", "0.30", "2.86%", "否")
         );
 
-        result.put("reply", "第一步已完成！波动超20%的报表项有2个：\n"
-                + "DCF010201 波动最大（52.69%），金额增加约6.35亿\n"
-                + "DCF010202 波动51.16%，金额减少约4.50亿\n\n"
+        result.put("stepReply", "第一步已完成！波动超20%的报表项有2个：\n"
+                + "· DCF010201 投资收益 波动最大（52.69%），金额增加约6.35亿\n"
+                + "· DCF010202 公允价值变动 波动-51.16%，金额减少约4.50亿\n"
                 + "现在分别依次对超过20%的报表项进行明细数据分析并给出分析结论。");
-
-        result.put("taskUpdates", List.of(
-                Map.of("taskId", "step1", "status", "completed",
-                        "detail", "获取8条报表项，2条波动>20%：DCF010201(52.69%)、DCF010202(-51.16%)"),
-                Map.of("taskId", "step2", "status", "active", "detail", "正在获取DCF010201明细数据...")
-        ));
 
         result.put("excelOperations", List.of(
                 Map.of("action", "addSheet", "sheetName", "Sheet1-报表数据",
                         "headers", headers, "rows", rows)
         ));
-
-        result.put("nextStep", "step2");
     }
 
     private void executeStep2(WorkflowState state, Map<String, Object> result) {
@@ -189,20 +176,12 @@ public class FinanceChatController {
                 createRow(headers, "其他交易", "8888_其他", "2004082004", "0006", "99100 (其他)", "0000", "9999_DIM_OTH")
         );
 
-        result.put("reply", "第二步已完成！已成功获取DCF010201报表项的明细数据，并插入Sheet2-DCF010201明细数据中。");
-
-        result.put("taskUpdates", List.of(
-                Map.of("taskId", "step2", "status", "completed",
-                        "detail", "获取DCF010201共8条明细记录"),
-                Map.of("taskId", "step3_1", "status", "active", "detail", "正在获取股权信息...")
-        ));
+        result.put("stepReply", "第二步已完成！已成功获取DCF010201报表项的明细数据，并插入Sheet2-DCF010201明细数据中。");
 
         result.put("excelOperations", List.of(
                 Map.of("action", "addSheet", "sheetName", "Sheet2-DCF010201明细数据",
                         "headers", headers, "rows", rows)
         ));
-
-        result.put("nextStep", "step3_1");
     }
 
     private void executeStep3_1(WorkflowState state, Map<String, Object> result) {
@@ -217,35 +196,19 @@ public class FinanceChatController {
                 createRow(headers, "0006", "合营公司F", "0044G")
         );
 
-        result.put("reply", "第3.1步完成！已成功获取股权信息并标注8大分层。并将该信息插入在线Excel中的Sheet3-所有权数据。");
-
-        result.put("taskUpdates", List.of(
-                Map.of("taskId", "step3_1", "status", "completed",
-                        "detail", "标注6家公司的分层分类"),
-                Map.of("taskId", "step3_2", "status", "active", "detail", "正在关联明细数据与层级信息...")
-        ));
+        result.put("stepReply", "第3.1步完成！已成功获取股权信息并标注8大分层，并将该信息插入在线Excel中的Sheet3-所有权数据。");
 
         result.put("excelOperations", List.of(
                 Map.of("action", "addSheet", "sheetName", "Sheet3-所有权数据",
                         "headers", headers, "rows", rows)
         ));
-
-        result.put("nextStep", "step3_2");
     }
 
     private void executeStep3_2(WorkflowState state, Map<String, Object> result) {
-        result.put("reply", "第3.2步完成！已成功关联明细数据与股权数据，标注公司层级和IC层级。\n"
-                + "- 共处理8条明细记录\n"
-                + "- 成功匹配层级信息6条\n"
-                + "- 2条无匹配股权信息（归类为外部交易）");
-
-        result.put("taskUpdates", List.of(
-                Map.of("taskId", "step3_2", "status", "completed",
-                        "detail", "关联8条记录，6条匹配层级信息"),
-                Map.of("taskId", "step3_3", "status", "active", "detail", "正在更新SR数据的IC层级...")
-        ));
-
-        result.put("nextStep", "step3_3");
+        result.put("stepReply", "第3.2步完成！已成功关联明细数据与股权数据，标注公司层级和IC层级。\n"
+                + "· 共处理8条明细记录\n"
+                + "· 成功匹配层级信息6条\n"
+                + "· 2条无匹配股权信息（归类为外部交易）");
     }
 
     private void executeStep3_3(WorkflowState state, Map<String, Object> result) {
@@ -261,21 +224,12 @@ public class FinanceChatController {
                 Map.of("公司层级", "0044G", "IC层级", "外部")
         );
 
-        result.put("reply", "第3.3步完成！已成功更新包含SR数据的IC层级。"
-                + "在明细数据中新增2列：公司层级、IC层级。");
-
-        result.put("taskUpdates", List.of(
-                Map.of("taskId", "step3_3", "status", "completed",
-                        "detail", "更新4条SR记录的IC层级信息"),
-                Map.of("taskId", "step3_4", "status", "active", "detail", "正在过滤数据...")
-        ));
+        result.put("stepReply", "第3.3步完成！已成功更新包含SR数据的IC层级。在明细数据中新增2列：公司层级、IC层级。");
 
         result.put("excelOperations", List.of(
                 Map.of("action", "updateSheet", "sheetIndex", 1,
                         "headers", appendHeaders, "rows", appendRows, "append", true)
         ));
-
-        result.put("nextStep", "step3_4");
     }
 
     private void executeStep3_4(WorkflowState state, Map<String, Object> result) {
@@ -291,73 +245,59 @@ public class FinanceChatController {
                 createRow(headers, "EMS售后回购", "6666_EMS回购", "2004082004", "0001", "11100 (应收账款)", "0011G", "2141_DIM_APL", "0011G", "0011G")
         );
 
-        result.put("reply", "第3.4步完成！已成功过滤数据并创建处理后数据。\n"
-                + "- 原始记录：8条\n"
-                + "- 过滤掉：2条（1条测试数据、1条零金额记录）\n"
-                + "- 剩余记录：6条\n"
-                + "- 已创建Sheet4-DCF010201明细数据处理后数据");
-
-        result.put("taskUpdates", List.of(
-                Map.of("taskId", "step3_4", "status", "completed",
-                        "detail", "过滤2条记录，剩余6条"),
-                Map.of("taskId", "step4", "status", "active", "detail", "正在校验数据合理性...")
-        ));
+        result.put("stepReply", "第3.4步完成！已成功过滤数据并创建Sheet4-DCF010201处理后数据。\n"
+                + "· 原始记录：8条\n"
+                + "· 过滤掉：2条（1条测试数据、1条零金额记录）\n"
+                + "· 剩余记录：6条");
 
         result.put("excelOperations", List.of(
                 Map.of("action", "addSheet", "sheetName", "Sheet4-DCF010201处理后数据",
                         "headers", headers, "rows", rows)
         ));
-
-        result.put("nextStep", "step4");
     }
 
     private void executeStep4(WorkflowState state, Map<String, Object> result) {
-        result.put("reply", "第四步完成！校验明细数据合理性校验结果：\n\n"
+        result.put("stepReply", "第四步完成！校验明细数据合理性校验结果：\n\n"
                 + "明细数据 rmb_fact_ex_rate_ptd 求和：15.88亿\n"
                 + "系统报表 DCF010201 当月金额：18.40亿\n"
                 + "差异：2.52亿\n\n"
                 + "结论：❌ 不一致（差异大于等于1亿）\n\n"
                 + "分析说明：\n"
-                + "- 明细数据求和与报表数据存在2.52亿元的差异\n"
-                + "- 差异较大，可能原因：\n"
-                + "  1. 明细数据经过过滤后，部分数据被剔除\n"
-                + "  2. period_id可能不完全对应P12期间\n"
-                + "  3. 数据源或口径存在差异\n"
-                + "  4. 汇总逻辑可能需要进一步检查\n"
-                + "- 请确认差异原因及解决方案。");
-
-        result.put("taskUpdates", List.of(
-                Map.of("taskId", "step4", "status", "completed",
-                        "detail", "校验结果：不一致，差异2.52亿"),
-                Map.of("taskId", "step5", "status", "active", "detail", "正在生成分析报告...")
-        ));
-
-        result.put("nextStep", "step5");
+                + "明细数据求和与报表数据存在2.52亿元的差异\n"
+                + "差异较大，可能原因：\n"
+                + "  · 明细数据经过过滤后，部分数据被剔除\n"
+                + "  · period_id可能不完全对应P12期间\n"
+                + "  · 数据源或口径存在差异\n"
+                + "  · 汇总逻辑可能需要进一步检查\n"
+                + "请确认差异原因及解决方案。");
     }
 
     private void executeStep5(WorkflowState state, Map<String, Object> result) {
-        List<String> headers = List.of("简化场景", "本月金额(亿)", "上月金额(亿)",
-                "波动金额(亿)", "波动比例(%)");
+        List<String> headers = List.of("报表项", "上一期间(亿)", "当前期间(亿)",
+                "波动金额(亿)", "波动比例", "波动分析结论");
 
         List<Map<String, String>> rows = List.of(
-                createRow(headers, "其他产品销售", "7.05", "1.70", "5.35", "75.82%"),
-                createRow(headers, "押金保证金", "6.05", "5.05", "1.00", "16.52%"),
-                createRow(headers, "其他应收款转回", "-6.29", "-6.79", "0.49", "-7.84%"),
-                createRow(headers, "利息", "2.24", "2.05", "0.19", "8.47%"),
-                createRow(headers, "EMS售后回购", "3.48", "3.79", "-0.32", "-9.17%")
+                createRow(headers, "DCF010201 投资收益", "12.05", "18.40", "6.35", "52.69%",
+                        "本月18.40亿，上月12.05亿，变动6.35亿，增长率52.69%，主要受到以下因素影响：\n"
+                        + "【EMS收款】本月3.48亿，上月2.10亿，变动1.38亿，增长率65.71%；\n"
+                        + "【智选车定金】本月2.80亿，上月1.50亿，变动1.30亿，增长率86.67%；\n"
+                        + "【终端自管店押金保证金】自管店保证金1.20亿，波动0.55亿，其中押金转货款0.30亿，收到押金0.15亿，货款转押金0.10亿；\n"
+                        + "【外汇远期处置收益】本月1.05亿，上月0.65亿，变动0.40亿，增长率61.54%；\n"
+                        + "【利息收入】本月2.24亿，上月2.05亿，变动0.19亿，增长率9.27%；\n"
+                        + "【华宜小额贷款】本月0.85亿，上月0.42亿，变动0.43亿，增长率102.38%"),
+                createRow(headers, "DCF010202 公允价值变动", "8.80", "4.30", "-4.50", "-51.16%",
+                        "本月4.30亿，上月8.80亿，变动-4.50亿，增长率-51.16%，主要受到以下因素影响：\n"
+                        + "【EMS收款】本月1.20亿，上月3.50亿，变动-2.30亿，增长率-65.71%；\n"
+                        + "【智选车定金】本月0.80亿，上月1.60亿，变动-0.80亿，增长率-50.00%；\n"
+                        + "【终端自管店押金保证金】自管店保证金0.65亿，波动-0.35亿，其中押金转货款0.10亿，收到押金0.05亿，货款转押金0.20亿；\n"
+                        + "【外汇远期处置收益】本月0.45亿，上月0.90亿，变动-0.45亿，增长率-50.00%；\n"
+                        + "【利息收入】本月0.50亿，上月0.60亿，变动-0.10亿，增长率-16.67%；\n"
+                        + "【华宜小额贷款】本月0.30亿，上月0.80亿，变动-0.50亿，增长率-62.50%")
         );
 
-        result.put("reply", "第五步完成！按简化场景汇聚并分析波动，已创建Sheet：现金流报表分析结论\n\n"
-                + "波动金额最大的简化场景（Top 5）：\n"
-                + "1. 其他产品销售 - 波动最大，增长75.8%，增加5.35亿\n"
-                + "2. 押金保证金 - 增长16.5%，增加1.00亿\n"
-                + "3. 利息 - 增长8.5%，增加0.19亿\n\n"
-                + "✅ 完成！现金流报表分析流程全部执行成功");
-
-        result.put("taskUpdates", List.of(
-                Map.of("taskId", "step5", "status", "completed",
-                        "detail", "生成Top5分析，最大波动：其他产品销售(75.82%)")
-        ));
+        result.put("stepReply", "第五步完成！按简化场景汇聚并分析波动，已创建结论分析Sheet。\n\n"
+                + "✅ 完成！现金流报表分析流程全部执行成功。\n"
+                + "共分析2个波动超20%的报表项，结论已写入「现金流报表分析结论」Sheet。");
 
         result.put("excelOperations", List.of(
                 Map.of("action", "addSheet", "sheetName", "现金流报表分析结论",
