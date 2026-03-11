@@ -450,7 +450,6 @@ const STEPS = [
 // Track state per step card
 let stepCardStates = {};
 let workflowStarted = false;
-let workflowResolve = null; // for confirm dialog
 
 // Excel
 let sheets = [];
@@ -669,43 +668,7 @@ async function executeWorkflowFromStep(startIdx) {
             }
         }
 
-        // After step4: show confirmation dialog
-        if (step.id === 'step4') {
-            const proceed = await showStep4Confirm();
-            if (!proceed) {
-                addMsg('bot', '已停止执行，您可以在步骤中点击"重试"按钮重新执行。');
-                return;
-            }
-        }
     }
-}
-
-// Show step4 confirmation dialog
-function showStep4Confirm() {
-    return new Promise(resolve => {
-        workflowResolve = resolve;
-        const c = document.getElementById('messages');
-        const card = document.createElement('div');
-        card.className = 'confirm-card';
-        card.id = 'step4Confirm';
-        card.innerHTML = `
-            <div class="confirm-text">校验结果显示明细数据与报表数据存在差异（差异 ≥ 1亿）。<br>是否忽略差异，继续执行后续分析步骤？</div>
-            <div class="confirm-btns">
-                <button class="confirm-btn yes" onclick="handleStep4Confirm(true)">是，忽略差异继续执行</button>
-                <button class="confirm-btn no" onclick="handleStep4Confirm(false)">否，暂停执行</button>
-            </div>
-        `;
-        c.appendChild(card);
-        scrollChat();
-    });
-}
-
-function handleStep4Confirm(yes) {
-    const card = document.getElementById('step4Confirm');
-    if (card) {
-        card.innerHTML = `<div class="confirm-text" style="color:#888">${yes ? '已选择：忽略差异，继续执行' : '已选择：暂停执行'}</div>`;
-    }
-    if (workflowResolve) { workflowResolve(yes); workflowResolve = null; }
 }
 
 // Reset a step card for re-execution
@@ -829,9 +792,14 @@ function renderSheet() {
     });
     h += '</tbody></table>';
     if (s.name.includes('现金流报表分析结论')) {
-        h += '<div style="text-align:center;padding:16px 0"><button class="download-btn" onclick="downloadSheet()">'
+        h += '<div style="text-align:center;padding:16px 0;display:flex;justify-content:center;gap:12px">'
+           + '<button class="download-btn" onclick="downloadSheet()">'
            + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>'
-           + ' 下载Excel</button></div>';
+           + ' 下载Excel</button>'
+           + '<button class="download-btn" style="background:#22C55E" onmouseover="this.style.background=\'#16A34A\'" onmouseout="this.style.background=\'#22C55E\'">'
+           + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>'
+           + ' 归档保存</button>'
+           + '</div>';
     }
     el.innerHTML = h;
 }
@@ -912,12 +880,13 @@ function downloadSheet() {
 }
 
 async function loadWelcome() {
-    try {
-        const r = await fetch(`${API}/api/finance/welcome`);
-        const d = await r.json();
-        await addMsgStreaming('bot', d.message, 1000);
-    } catch {
-        await addMsgStreaming('bot', '您好！我是财报波动合理性检查智能助手。我可以帮您分析报表项波动的合理性，包括现金流量表、资产负债表哟', 1000);
+    const plainText = '您好！我是财报波动合理性检查智能助手。当前发现本结账期你有1个待办：本端核算作业质量监控发现1个检查不通过项。';
+    await addMsgStreaming('bot', plainText, 1000);
+    // Apply blue highlight to "1个待办"
+    const bubbles = document.querySelectorAll('.msg.bot .msg-bubble');
+    if (bubbles.length > 0) {
+        const last = bubbles[bubbles.length - 1];
+        last.innerHTML = last.innerHTML.replace('1个待办', '<span style="color:#1976D2;font-weight:600">1个待办</span>');
     }
 }
 
