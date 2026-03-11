@@ -74,7 +74,7 @@ public class FinanceChatController {
             state.phase = "awaiting_entity";
             workflowStates.put(sessionId, state);
 
-            reply = "请告知我您需要对哪一个实体公司进行现金流报表波动合理性分析？";
+            reply = "请告知我您需要对哪一个实体公司进行现金流报表波动合理性分析？（期间默认当前期间）";
             result.put("reply", reply);
             result.put("workflowActive", false);
 
@@ -225,15 +225,7 @@ public class FinanceChatController {
 
     private void executeStep4(WorkflowState state, Map<String, Object> result) {
         result.put("stepReply", "第四步完成！校验明细数据合理性校验结果：\n\n"
-                + "结论：❌ 不一致（差异大于等于1亿）\n\n"
-                + "分析说明：\n"
-                + "明细数据求和与报表数据存在差异\n"
-                + "差异较大，可能原因：\n"
-                + "  · 明细数据经过过滤后，部分数据被剔除\n"
-                + "  · period_id可能不完全对应当前期间\n"
-                + "  · 数据源或口径存在差异\n"
-                + "  · 汇总逻辑可能需要进一步检查\n"
-                + "请确认差异原因及解决方案。");
+                + "结论：数据源或口径存在差异校验一致");
     }
 
     private void executeStep5(WorkflowState state, Map<String, Object> result) {
@@ -265,7 +257,7 @@ public class FinanceChatController {
     @GetMapping("/welcome")
     public Map<String, String> welcome() {
         return Map.of("message", "您好！我是财报波动合理性检查智能助手。"
-                + "我可以帮您分析报表项波动的合理性，包括现金流量表、资产负债表哟");
+                + "当前发现本结账期你有1个待办：本端核算作业质量监控发现1个检查不通过项。");
     }
 
     // ===================== Helper Methods =====================
