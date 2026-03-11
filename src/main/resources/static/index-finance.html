@@ -430,7 +430,7 @@ const STEPS = [
     { id: 'step1', title: '第一步：获取EFM报表数据并计算波动值', subs: [
         { id: 'step1', text: '读取系统报表数据并计算波动比例' }
     ]},
-    { id: 'step2', title: '第二步：获取DCF010201明细数据', subs: [
+    { id: 'step2', title: '第二步：获取DCF010102明细数据', subs: [
         { id: 'step2', text: '提取波动超20%报表项的明细数据' }
     ]},
     { id: 'step3', title: '第三步：数据处理与层级标注', subs: [
@@ -828,7 +828,7 @@ function renderSheet() {
         h += '</tr>';
     });
     h += '</tbody></table>';
-    if (s.name === '现金流报表分析结论') {
+    if (s.name.includes('现金流报表分析结论')) {
         h += '<div style="text-align:center;padding:16px 0"><button class="download-btn" onclick="downloadSheet()">'
            + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>'
            + ' 下载Excel</button></div>';
