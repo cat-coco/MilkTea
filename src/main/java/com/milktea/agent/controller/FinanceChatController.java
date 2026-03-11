@@ -150,11 +150,11 @@ public class FinanceChatController {
         StringBuilder reply = new StringBuilder("第一步已完成！波动超20%的报表项有" + overCount + "个：\n");
         data.rows().stream()
                 .filter(r -> "是".equals(r.get("是否波动超20%")))
-                .forEach(r -> reply.append("· ").append(r.get("报表项"))
-                        .append(" 波动比例 ").append(r.get("波动比例")).append("\n"));
-        reply.append("现在分别依次对超过20%的报表项进行明细数据分析并给出分析结论。");
+                .forEach(r -> reply.append("• ").append(r.get("报表项"))
+                        .append("：波动比例 ").append(r.get("波动比例"))
+                        .append("，现在对波动超20%的报表项进行明细数据分析并给出分析结论。\n"));
 
-        result.put("stepReply", reply.toString());
+        result.put("stepReply", reply.toString().trim());
         result.put("excelOperations", List.of(
                 Map.of("action", "addSheet", "sheetName", data.name(),
                         "headers", data.headers(), "rows", data.rows())
@@ -164,7 +164,9 @@ public class FinanceChatController {
     private void executeStep2(WorkflowState state, Map<String, Object> result) {
         MockDataService.SheetData data = mockDataService.getSheet("Sheet2-DCF010102明细数据");
 
-        result.put("stepReply", "第二步已完成！已成功获取报表项的明细数据，共" + data.rows().size() + "条记录。");
+        result.put("stepReply", "第二步已完成！已成功将DCF010102明细数据（"
+                + String.format("%,d", data.rows().size()) + "行 × " + data.headers().size() + "列）写入到"
+                + data.name() + "中。");
         result.put("excelOperations", List.of(
                 Map.of("action", "addSheet", "sheetName", data.name(),
                         "headers", data.headers(), "rows", data.rows())
@@ -215,8 +217,8 @@ public class FinanceChatController {
     private void executeStep3_4(WorkflowState state, Map<String, Object> result) {
         MockDataService.SheetData data = mockDataService.getSheet("Sheet4-DCF010102处理后数据");
 
-        result.put("stepReply", "第3.4步完成！已成功过滤数据并创建处理后数据。\n"
-                + "· 剩余记录：" + data.rows().size() + "条");
+        result.put("stepReply", "第三步已完成！已成功根据公司层级、IC层级及JC过滤处理数据，DCF010102明细数据处理后数据已放置于"
+                + data.name() + "。");
         result.put("excelOperations", List.of(
                 Map.of("action", "addSheet", "sheetName", data.name(),
                         "headers", data.headers(), "rows", data.rows())
@@ -224,8 +226,10 @@ public class FinanceChatController {
     }
 
     private void executeStep4(WorkflowState state, Map<String, Object> result) {
-        result.put("stepReply", "第四步完成！校验明细数据合理性校验结果：\n\n"
-                + "结论：数据源或口径存在差异校验一致");
+        result.put("stepReply", "步骤4完成！校验结果：\n"
+                + "结论：在亿级上，两个值不一致，相差1.1亿，这个差异可能是因为：\n"
+                + "1. 合并报告数据经过了分录调整，该差异为合理性差异？\n"
+                + "2. 数据源或者取数口径存在差异，需要进一步确认");
     }
 
     private void executeStep5(WorkflowState state, Map<String, Object> result) {
@@ -256,8 +260,7 @@ public class FinanceChatController {
 
     @GetMapping("/welcome")
     public Map<String, String> welcome() {
-        return Map.of("message", "您好！我是财报波动合理性检查智能助手。"
-                + "当前发现本结账期你有1个待办：本端核算作业质量监控发现1个检查不通过项。");
+        return Map.of("message", "您好！我是财报波动合理性检查智能助手");
     }
 
     // ===================== Helper Methods =====================
