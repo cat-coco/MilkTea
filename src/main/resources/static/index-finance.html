@@ -57,10 +57,13 @@
             background: var(--bg-white); border-right: 1px solid var(--border); overflow: hidden;
         }
         .excel-toolbar {
-            background: #E3F2FD; padding: 6px 16px; display: flex; align-items: center;
-            gap: 12px; font-size: 12px; color: #1565C0; flex-shrink: 0; border-bottom: 1px solid #BBDEFB;
+            background: #FFFFFF; padding: 6px 16px; display: flex; align-items: center;
+            gap: 4px; font-size: 12px; color: #333; flex-shrink: 0; border-bottom: 1px solid #E0E0E0;
         }
-        .excel-toolbar .toolbar-label { font-weight: 600; }
+        .excel-toolbar .toolbar-label { font-weight: 600; display: flex; align-items: center; gap: 4px; }
+        .excel-toolbar .toolbar-item { display: flex; align-items: center; gap: 4px; }
+        .excel-toolbar .toolbar-icon { color: #999; display: flex; align-items: center; }
+        .excel-toolbar .toolbar-sep { color: #CCC; margin: 0 4px; }
         .excel-tab-bar {
             display: flex; background: #ECEFF1; border-bottom: 2px solid var(--primary);
             flex-shrink: 0; overflow-x: auto; padding: 0 4px; min-height: 34px;
@@ -365,9 +368,20 @@
     <!-- Left: Excel Area -->
     <div class="excel-area">
         <div class="excel-toolbar">
-            <span class="toolbar-label">EFM报告数据监控</span>
-            <span style="opacity:0.6">|</span>
-            <span>财报波动分析工作区</span>
+            <span class="toolbar-item">
+                <span class="toolbar-label">工作台</span>
+                <span class="toolbar-icon"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg></span>
+            </span>
+            <span class="toolbar-sep">|</span>
+            <span class="toolbar-item">
+                <span>报告数据监控</span>
+                <span class="toolbar-icon"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span>
+            </span>
+            <span class="toolbar-sep">|</span>
+            <span class="toolbar-item">
+                <span>现金流波动合理性检查</span>
+                <span class="toolbar-icon"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span>
+            </span>
         </div>
         <div class="excel-tab-bar" id="excelTabBar"></div>
         <div class="excel-content" id="excelContent">
