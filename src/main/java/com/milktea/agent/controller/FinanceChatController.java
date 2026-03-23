@@ -17,6 +17,10 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CompletableFuture;
+import java.io.IOException;
+import org.springframework.http.MediaType;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 /**
  * 财报分析聊天控制器 - 处理 frontend-extensionV2 的所有前端请求。
@@ -34,6 +38,24 @@ public class FinanceChatController {
     private final MockDataService mockDataService;
 
     private final Map<String, WorkflowState> workflowStates = new ConcurrentHashMap<>();
+
+    /** 每个子任务的流式进度提示 */
+    private static final Map<String, List<String>> STEP_PROGRESS = Map.ofEntries(
+            Map.entry("step1", List.of("正在连接EFM报表系统...", "正在读取报表数据...",
+                    "正在计算各报表项波动比例...", "正在标注异常波动项（波动>20%）...")),
+            Map.entry("step2", List.of("正在查询DCF010102明细数据...",
+                    "正在提取波动超20%报表项的明细...", "正在写入明细数据到Sheet...")),
+            Map.entry("step3_1", List.of("正在查询股权关系信息...", "正在标注被持股公司8大分层...")),
+            Map.entry("step3_2", List.of("正在关联明细数据与股权数据...", "正在标注公司层级和IC层级...")),
+            Map.entry("step3_3", List.of("正在读取SR6数据...", "正在更新IC层级信息...",
+                    "正在追加公司层级、IC层级列...")),
+            Map.entry("step3_4", List.of("正在按公司层级过滤数据...", "正在按IC层级及JC过滤...",
+                    "正在创建处理后数据...")),
+            Map.entry("step4", List.of("正在汇总明细数据金额...", "正在读取报表期间金额...",
+                    "正在进行数据一致性比对校验...")),
+            Map.entry("step5", List.of("正在按简化场景汇聚数据...", "正在分析各场景波动原因...",
+                    "正在生成波动分析结论...", "正在写入结论到Sheet..."))
+    );
 
     public FinanceChatController(@Qualifier("financeMainAgent") ReactAgent financeMainAgent,
                                   ChatModel chatModel,
@@ -138,6 +160,72 @@ public class FinanceChatController {
         }
 
         return result;
+    }
+
+    /**
+     * 流式执行步骤 —— 先逐条推送 progress JSON，再推送 excel/complete JSON。
+     * 复用已有 executeStepX 方法生成数据，仅用 SSE 包装。
+     */
+    @PostMapping(value = "/execute-step-stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter executeStepStream(@RequestBody StepRequest request) {
+        SseEmitter emitter = new SseEmitter(120_000L);
+        String sessionId = request.sessionId();
+        String stepId = request.stepId();
+        WorkflowState state = workflowStates.get(sessionId);
+
+        CompletableFuture.runAsync(() -> {
+            try {
+                if (state == null) {
+                    sseEvent(emitter, Map.of("type", "complete", "stepReply",
+                            "未找到活跃的工作流，请重新发起分析。"));
+                    emitter.complete();
+                    return;
+                }
+
+                // 1. 流式推送进度
+                List<String> msgs = STEP_PROGRESS.getOrDefault(stepId, List.of("正在处理..."));
+                for (int i = 0; i < msgs.size(); i++) {
+                    Thread.sleep(500 + (int) (Math.random() * 400));
+                    int pct = (int) ((i + 1.0) / (msgs.size() + 1) * 100);
+                    sseEvent(emitter, Map.of("type", "progress", "message", msgs.get(i), "percent", pct));
+                }
+                Thread.sleep(300);
+
+                // 2. 执行步骤逻辑（复用已有方法）
+                Map<String, Object> result = new LinkedHashMap<>();
+                result.put("sessionId", sessionId);
+                switch (stepId) {
+                    case "step1" -> executeStep1(state, result);
+                    case "step2" -> executeStep2(state, result);
+                    case "step3_1" -> executeStep3_1(state, result);
+                    case "step3_2" -> executeStep3_2(state, result);
+                    case "step3_3" -> executeStep3_3(state, result);
+                    case "step3_4" -> executeStep3_4(state, result);
+                    case "step4" -> executeStep4(state, result);
+                    case "step5" -> executeStep5(state, result);
+                    default -> result.put("stepReply", "未知步骤：" + stepId);
+                }
+
+                // 3. 推送 Excel 操作
+                Object excelOps = result.get("excelOperations");
+                if (excelOps != null) {
+                    sseEvent(emitter, Map.of("type", "excel", "excelOperations", excelOps));
+                }
+
+                // 4. 推送完成
+                sseEvent(emitter, Map.of("type", "complete",
+                        "stepReply", result.getOrDefault("stepReply", "")));
+                emitter.complete();
+            } catch (Exception e) {
+                try { emitter.completeWithError(e); } catch (Exception ignored) {}
+            }
+        });
+
+        return emitter;
+    }
+
+    private void sseEvent(SseEmitter emitter, Map<String, Object> data) throws IOException {
+        emitter.send(SseEmitter.event().data(data, MediaType.APPLICATION_JSON));
     }
 
     private void executeStep1(WorkflowState state, Map<String, Object> result) {

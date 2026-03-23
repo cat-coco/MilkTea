@@ -600,6 +600,47 @@ function hideStepThinking(stepId) {
     if (thinkEl) thinkEl.style.display = 'none';
 }
 
+// ==================== SSE Stream Helper ====================
+async function executeSubTaskStream(stepId, subId) {
+    const response = await fetch(`${API}/api/finance/execute-step-stream`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId, stepId: subId })
+    });
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    const result = {};
+
+    while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        let idx;
+        while ((idx = buffer.indexOf('\n\n')) !== -1) {
+            const chunk = buffer.substring(0, idx);
+            buffer = buffer.substring(idx + 2);
+            for (const line of chunk.split('\n')) {
+                if (line.startsWith('data:')) {
+                    try {
+                        const event = JSON.parse(line.substring(5));
+                        if (event.type === 'progress') {
+                            showStepThinking(stepId, event.message);
+                            scrollChat();
+                        } else if (event.type === 'excel') {
+                            result.excelOperations = event.excelOperations;
+                        } else if (event.type === 'complete') {
+                            result.stepReply = event.stepReply;
+                        }
+                    } catch (e) { /* ignore parse errors */ }
+                }
+            }
+        }
+    }
+    return result;
+}
+
 // ==================== Workflow orchestration ====================
 async function startWorkflow() {
     if (workflowStarted) return;
@@ -632,18 +673,11 @@ async function executeWorkflowFromStep(startIdx) {
         let stepAborted = false;
         for (const sub of step.subs) {
             setSubTaskStatus(sub.id, 'running');
-            showStepThinking(step.id, '正在执行...');
+            showStepThinking(step.id, '正在连接...');
             scrollChat();
 
-            await delay(1200 + Math.random() * 800);
-
             try {
-                const r = await fetch(`${API}/api/finance/execute-step`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ sessionId, stepId: sub.id })
-                });
-                const d = await r.json();
+                const d = await executeSubTaskStream(step.id, sub.id);
 
                 hideStepThinking(step.id);
                 setSubTaskStatus(sub.id, 'done');
