@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>财报波动合理性分析 - AI智能助手</title>
+    <title>财报波动合理性检查 - Spring AI Agent</title>
     <style>
         :root {
             --primary: #1976D2;
@@ -57,10 +57,13 @@
             background: var(--bg-white); border-right: 1px solid var(--border); overflow: hidden;
         }
         .excel-toolbar {
-            background: #E3F2FD; padding: 6px 16px; display: flex; align-items: center;
-            gap: 12px; font-size: 12px; color: #1565C0; flex-shrink: 0; border-bottom: 1px solid #BBDEFB;
+            background: #FFFFFF; padding: 6px 16px; display: flex; align-items: center;
+            gap: 4px; font-size: 12px; color: #333; flex-shrink: 0; border-bottom: 1px solid #E0E0E0;
         }
-        .excel-toolbar .toolbar-label { font-weight: 600; }
+        .excel-toolbar .toolbar-label { font-weight: 600; display: flex; align-items: center; gap: 4px; }
+        .excel-toolbar .toolbar-item { display: flex; align-items: center; gap: 4px; }
+        .excel-toolbar .toolbar-icon { color: #999; display: flex; align-items: center; }
+        .excel-toolbar .toolbar-sep { color: #CCC; margin: 0 4px; }
         .excel-tab-bar {
             display: flex; background: #ECEFF1; border-bottom: 2px solid var(--primary);
             flex-shrink: 0; overflow-x: auto; padding: 0 4px; min-height: 34px;
@@ -176,11 +179,35 @@
             display: flex; align-items: center; justify-content: center;
         }
         .sub-task-text { flex: 1; }
-        .sub-task.done .sub-task-text { color: #999; text-decoration: line-through; }
+        .sub-task.done .sub-task-text { color: #888; }
         .sub-task.running { background: rgba(59,130,246,0.06); }
         .sub-task.running .sub-task-text { color: #2563EB; font-weight: 500; }
         .sub-task-status { font-size: 10px; color: #999; flex-shrink: 0; }
         .sub-task.running .sub-task-status { color: #2563EB; }
+        .sub-task-retry {
+            font-size: 10px; color: #3B82F6; cursor: pointer; flex-shrink: 0;
+            padding: 1px 8px; border: 1px solid #90CAF9; border-radius: 10px;
+            background: #E3F2FD; transition: all 0.15s; display: none;
+        }
+        .sub-task-retry:hover { background: #3B82F6; color: white; }
+        .sub-task.done .sub-task-retry { display: inline-block; }
+
+        /* Confirm dialog in chat */
+        .confirm-card {
+            background: white; border: 1px solid #E0E0E0; border-radius: 12px;
+            padding: 14px 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+            animation: fadeIn 0.3s ease; width: 100%;
+        }
+        .confirm-card .confirm-text { font-size: 12px; color: #333; line-height: 1.6; margin-bottom: 12px; }
+        .confirm-btns { display: flex; gap: 10px; }
+        .confirm-btn {
+            flex: 1; padding: 8px 0; border-radius: 8px; font-size: 12px; font-weight: 600;
+            cursor: pointer; border: none; transition: all 0.15s;
+        }
+        .confirm-btn.yes { background: #3B82F6; color: white; }
+        .confirm-btn.yes:hover { background: #2563EB; }
+        .confirm-btn.no { background: #F5F5F5; color: #666; border: 1px solid #DDD; }
+        .confirm-btn.no:hover { background: #E0E0E0; }
 
         /* Step reply (completion detail) */
         .step-reply {
@@ -255,6 +282,7 @@
         /* Input Area */
         .input-area {
             padding: 12px 16px; background: white; border-top: 1px solid var(--border); flex-shrink: 0;
+            position: relative;
         }
         .input-row { display: flex; gap: 8px; align-items: flex-end; }
         .chat-input {
@@ -280,6 +308,39 @@
         .messages::-webkit-scrollbar, .excel-content::-webkit-scrollbar { width: 6px; }
         .messages::-webkit-scrollbar-thumb, .excel-content::-webkit-scrollbar-thumb { background: #BDBDBD; border-radius: 3px; }
 
+        /* Download button */
+        .download-btn {
+            padding: 8px 24px; border-radius: 8px; background: var(--primary);
+            color: white; border: none; font-size: 13px; cursor: pointer;
+            transition: all 0.2s; font-weight: 500; display: inline-flex;
+            align-items: center; gap: 6px;
+        }
+        .download-btn:hover { background: var(--primary-dark); }
+
+        /* Command dropdown */
+        .cmd-trigger {
+            width: 36px; height: 36px; border-radius: 50%; background: #E3F2FD;
+            border: 1px solid #90CAF9; display: flex; align-items: center; justify-content: center;
+            cursor: pointer; flex-shrink: 0; transition: all 0.2s; color: #1565C0;
+            font-size: 16px; font-weight: 700;
+        }
+        .cmd-trigger:hover { background: #BBDEFB; }
+        .cmd-dropdown {
+            display: none; position: absolute; bottom: 100%; left: 0; right: 0;
+            background: white; border: 1px solid #E0E0E0; border-radius: 10px;
+            box-shadow: 0 -4px 12px rgba(0,0,0,0.1); margin-bottom: 8px;
+            overflow: hidden; z-index: 20;
+        }
+        .cmd-dropdown.show { display: block; animation: fadeIn 0.15s ease; }
+        .cmd-dropdown-title { font-size: 11px; color: #999; padding: 8px 14px 4px; }
+        .cmd-item {
+            padding: 10px 14px; font-size: 13px; cursor: pointer;
+            color: #333; transition: background 0.15s;
+        }
+        .cmd-item:hover { background: #E3F2FD; }
+        .cmd-item .cmd-label { font-weight: 500; }
+        .cmd-item .cmd-desc { font-size: 11px; color: #999; margin-top: 2px; }
+
         @media (max-width: 768px) {
             .chat-panel { width: 100%; }
             .excel-area { display: none; }
@@ -297,8 +358,8 @@
             </svg>
         </div>
         <div>
-            <h1>财报波动合理性分析</h1>
-            <div class="subtitle">AI智能助手 - Spring AI Alibaba Graph Agent</div>
+            <h1>财报波动合理性检查</h1>
+            <div class="subtitle">Spring AI Agent</div>
         </div>
     </div>
 </div>
@@ -307,9 +368,20 @@
     <!-- Left: Excel Area -->
     <div class="excel-area">
         <div class="excel-toolbar">
-            <span class="toolbar-label">在线数据工作表</span>
-            <span style="opacity:0.6">|</span>
-            <span>财报波动分析工作区</span>
+            <span class="toolbar-item">
+                <span class="toolbar-label">工作台</span>
+                <span class="toolbar-icon"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg></span>
+            </span>
+            <span class="toolbar-sep">|</span>
+            <span class="toolbar-item">
+                <span>报告数据监控</span>
+                <span class="toolbar-icon"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span>
+            </span>
+            <span class="toolbar-sep">|</span>
+            <span class="toolbar-item">
+                <span>现金流波动合理性检查</span>
+                <span class="toolbar-icon"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span>
+            </span>
         </div>
         <div class="excel-tab-bar" id="excelTabBar"></div>
         <div class="excel-content" id="excelContent">
@@ -327,15 +399,26 @@
 
     <!-- Right: Chat Panel -->
     <div class="chat-panel">
-        <div class="quick-actions">
-            <button class="quick-btn" onclick="sendQuick('请帮我对现金流报表进行波动合理性分析')">现金流分析</button>
-            <button class="quick-btn" onclick="sendQuick('请帮我检查资产负债表的波动情况')">资产负债表检查</button>
-            <button class="quick-btn" onclick="sendQuick('显示所有波动超过20%的报表项')">异常筛查</button>
-        </div>
         <div class="messages" id="messages"></div>
         <div class="input-area">
+            <div class="cmd-dropdown" id="cmdDropdown">
+                <div class="cmd-dropdown-title">/ 快捷指令</div>
+                <div class="cmd-item" onclick="selectCmd('请帮我对现金流报表进行波动合理性分析')">
+                    <div class="cmd-label">现金流波动合理性检查分析</div>
+                    <div class="cmd-desc">对现金流报表进行波动合理性检查分析</div>
+                </div>
+                <div class="cmd-item" onclick="selectCmd('请帮我检查资产负债表的波动情况')">
+                    <div class="cmd-label">资产负债表检查</div>
+                    <div class="cmd-desc">检查资产负债表的波动情况</div>
+                </div>
+                <div class="cmd-item" onclick="selectCmd('显示所有波动超过20%的报表项')">
+                    <div class="cmd-label">异常筛查</div>
+                    <div class="cmd-desc">显示所有波动超过20%的报表项</div>
+                </div>
+            </div>
             <div class="input-row">
-                <textarea class="chat-input" id="chatInput" placeholder="请输入消息，例如：请帮我对现金流报表进行波动合理性分析..." rows="1"></textarea>
+                <div class="cmd-trigger" onclick="toggleCmdDropdown()" title="快捷指令">/</div>
+                <textarea class="chat-input" id="chatInput" placeholder="输入消息或点击 / 选择快捷指令..." rows="1"></textarea>
                 <button class="send-btn" id="sendBtn" onclick="sendMessage()">&#10148;</button>
             </div>
             <div class="input-toolbar">
@@ -361,7 +444,7 @@ const STEPS = [
     { id: 'step1', title: '第一步：获取EFM报表数据并计算波动值', subs: [
         { id: 'step1', text: '读取系统报表数据并计算波动比例' }
     ]},
-    { id: 'step2', title: '第二步：获取DCF010201明细数据', subs: [
+    { id: 'step2', title: '第二步：获取DCF010102明细数据', subs: [
         { id: 'step2', text: '提取波动超20%报表项的明细数据' }
     ]},
     { id: 'step3', title: '第三步：数据处理与层级标注', subs: [
@@ -381,10 +464,13 @@ const STEPS = [
 // Track state per step card
 let stepCardStates = {};
 let workflowStarted = false;
+let workflowResolve = null;
 
 // Excel
 let sheets = [];
 let activeSheet = 0;
+// Track sheet count before each major step for rollback
+let sheetSnapshotBeforeStep = {};
 
 // ==================== Init ====================
 document.addEventListener('DOMContentLoaded', () => {
@@ -395,6 +481,11 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('chatInput').addEventListener('input', function() {
         this.style.height = 'auto';
         this.style.height = Math.min(this.scrollHeight, 80) + 'px';
+    });
+    document.addEventListener('click', e => {
+        if (!e.target.closest('.cmd-trigger') && !e.target.closest('.cmd-dropdown')) {
+            document.getElementById('cmdDropdown').classList.remove('show');
+        }
     });
 });
 
@@ -452,6 +543,7 @@ async function revealSubTasks(step) {
                 <div class="sub-task-icon" id="sicon-${sub.id}">${ICON_PENDING}</div>
                 <div class="sub-task-text">${esc(sub.text)}</div>
                 <div class="sub-task-status" id="sst-${sub.id}"></div>
+                <span class="sub-task-retry" id="retry-${sub.id}" onclick="event.stopPropagation();retryFromStep('${sub.id}')">重试</span>
             </div>
         `;
         subsEl.appendChild(wrap);
@@ -512,31 +604,39 @@ function hideStepThinking(stepId) {
 async function startWorkflow() {
     if (workflowStarted) return;
     workflowStarted = true;
-    await executeWorkflowSteps();
+    await executeWorkflowFromStep(0);
 }
 
-async function executeWorkflowSteps() {
-    for (let i = 0; i < STEPS.length; i++) {
+async function executeWorkflowFromStep(startIdx) {
+    for (let i = startIdx; i < STEPS.length; i++) {
         const step = STEPS[i];
-        // 1. Create this step card (user sees it for the first time)
-        await delay(600 + Math.random() * 400);
-        createStepCard(step, i);
-        scrollChat();
 
-        // 2. Activate card and reveal sub-tasks with thinking
+        // Snapshot sheet count before this major step (for rollback)
+        sheetSnapshotBeforeStep[step.id] = sheets.length;
+
+        // 1. Create step card if not exists
+        if (!document.getElementById('sc-' + step.id)) {
+            await delay(600 + Math.random() * 400);
+            createStepCard(step, i);
+            scrollChat();
+        } else {
+            // Reset card for re-execution
+            resetStepCard(step);
+        }
+
+        // 2. Activate and reveal sub-tasks
         updateStepBadge(step.id, 'running');
         await revealSubTasks(step);
 
-        // 3. Execute all sub-tasks of this step
+        // 3. Execute all sub-tasks
+        let stepAborted = false;
         for (const sub of step.subs) {
             setSubTaskStatus(sub.id, 'running');
             showStepThinking(step.id, '正在执行...');
             scrollChat();
 
-            // Simulate thinking 1-2s
             await delay(1200 + Math.random() * 800);
 
-            // Call backend
             try {
                 const r = await fetch(`${API}/api/finance/execute-step`, {
                     method: 'POST',
@@ -582,7 +682,91 @@ async function executeWorkflowSteps() {
                 return;
             }
         }
+
+        // After step4: show confirmation dialog
+        if (step.id === 'step4') {
+            const proceed = await showStep4Confirm();
+            if (!proceed) {
+                addMsg('bot', '已停止执行，您可以在步骤中点击"重试"按钮重新执行。');
+                return;
+            }
+        }
     }
+}
+
+// Show step4 confirmation dialog
+function showStep4Confirm() {
+    return new Promise(resolve => {
+        workflowResolve = resolve;
+        const c = document.getElementById('messages');
+        const card = document.createElement('div');
+        card.className = 'confirm-card';
+        card.id = 'step4Confirm';
+        card.innerHTML = `
+            <div class="confirm-text">是否需要继续执行波动分析？</div>
+            <div class="confirm-btns">
+                <button class="confirm-btn yes" onclick="handleStep4Confirm(true)">是，忽略差异继续执行</button>
+                <button class="confirm-btn no" onclick="handleStep4Confirm(false)">否，不忽略差异</button>
+            </div>
+        `;
+        c.appendChild(card);
+        scrollChat();
+    });
+}
+
+function handleStep4Confirm(yes) {
+    const card = document.getElementById('step4Confirm');
+    if (card) {
+        card.innerHTML = `<div class="confirm-text" style="color:#888">${yes ? '已选择：忽略差异，继续执行' : '已选择：不忽略差异，停止执行'}</div>`;
+    }
+    if (workflowResolve) { workflowResolve(yes); workflowResolve = null; }
+}
+
+// Reset a step card for re-execution
+function resetStepCard(step) {
+    const subsEl = document.getElementById('subs-' + step.id);
+    if (subsEl) subsEl.innerHTML = '';
+    const replyEl = document.getElementById('reply-' + step.id);
+    if (replyEl) { replyEl.textContent = ''; replyEl.classList.remove('show'); }
+    updateStepBadge(step.id, 'pending');
+    updateStepProgress(step.id, 0, false);
+    hideStepThinking(step.id);
+}
+
+// Retry from a specific sub-task's major step
+async function retryFromStep(subId) {
+    if (isLoading) return;
+    // Find major step index
+    let majorIdx = -1;
+    for (let i = 0; i < STEPS.length; i++) {
+        if (STEPS[i].subs.some(s => s.id === subId)) { majorIdx = i; break; }
+    }
+    if (majorIdx < 0) return;
+
+    // Rollback sheets: remove all sheets created from this step onward
+    const snapshot = sheetSnapshotBeforeStep[STEPS[majorIdx].id];
+    if (snapshot !== undefined && sheets.length > snapshot) {
+        sheets = sheets.slice(0, snapshot);
+        activeSheet = Math.max(0, sheets.length - 1);
+        renderTabs(); renderSheet();
+    }
+
+    // Remove step cards from this step onward
+    for (let i = majorIdx; i < STEPS.length; i++) {
+        const card = document.getElementById('sc-' + STEPS[i].id);
+        if (card) card.remove();
+        delete stepCardStates[STEPS[i].id];
+    }
+
+    // Remove any confirm card
+    const confirmCard = document.getElementById('step4Confirm');
+    if (confirmCard) confirmCard.remove();
+
+    isLoading = true;
+    document.getElementById('sendBtn').disabled = true;
+    await executeWorkflowFromStep(majorIdx);
+    isLoading = false;
+    document.getElementById('sendBtn').disabled = false;
 }
 
 // ==================== Excel ====================
@@ -658,6 +842,16 @@ function renderSheet() {
         h += '</tr>';
     });
     h += '</tbody></table>';
+    if (s.name.includes('现金流报表分析结论')) {
+        h += '<div style="text-align:center;padding:16px 0;display:flex;justify-content:center;gap:12px">'
+           + '<button class="download-btn" onclick="downloadSheet()">'
+           + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>'
+           + ' 下载Excel</button>'
+           + '<button class="download-btn" style="background:#22C55E" onmouseover="this.style.background=\'#16A34A\'" onmouseout="this.style.background=\'#22C55E\'">'
+           + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>'
+           + ' 归档保存</button>'
+           + '</div>';
+    }
     el.innerHTML = h;
 }
 
@@ -685,14 +879,60 @@ function esc(t) { const d = document.createElement('div'); d.textContent = t; re
 function scrollChat() { const c = document.getElementById('messages'); c.scrollTop = c.scrollHeight; }
 function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-async function loadWelcome() {
-    try {
-        const r = await fetch(`${API}/api/finance/welcome`);
-        const d = await r.json();
-        addMsg('bot', d.message);
-    } catch {
-        addMsg('bot', '您好！我是财报波动合理性分析智能助手。我可以帮您分析报表项波动的合理性，包括现金流量表、资产负债表等。请告诉我您想分析哪份报表？');
+// ==================== Streaming / Typewriter ====================
+async function addMsgStreaming(type, text, durationMs) {
+    durationMs = durationMs || 1000;
+    const c = document.getElementById('messages');
+    const d = document.createElement('div');
+    d.className = `msg ${type}`;
+    const av = type === 'bot' ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3h18v18H3z"/><path d="M3 9h18"/><path d="M9 3v18"/></svg>' : '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-7 8-7s8 3 8 7"/></svg>';
+    d.innerHTML = `<div class="msg-avatar">${av}</div><div class="msg-bubble"></div>`;
+    c.appendChild(d);
+    const bubble = d.querySelector('.msg-bubble');
+    const charInterval = Math.max(durationMs / text.length, 5);
+    for (let i = 0; i < text.length; i++) {
+        bubble.textContent = text.substring(0, i + 1);
+        c.scrollTop = c.scrollHeight;
+        await delay(charInterval);
     }
+}
+
+// ==================== Command Dropdown ====================
+function toggleCmdDropdown() {
+    document.getElementById('cmdDropdown').classList.toggle('show');
+}
+
+function selectCmd(text) {
+    document.getElementById('cmdDropdown').classList.remove('show');
+    document.getElementById('chatInput').value = text;
+    sendMessage();
+}
+
+// ==================== Download Excel ====================
+function escHtml(t) { return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function downloadSheet() {
+    const s = sheets[activeSheet];
+    let html = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:spreadsheet" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="UTF-8"></head><body><table border="1">';
+    html += '<tr>' + s.headers.map(h => '<th style="background:#E3F2FD;font-weight:bold">' + escHtml(h) + '</th>').join('') + '</tr>';
+    s.rows.forEach(row => {
+        html += '<tr>' + s.headers.map(h => '<td>' + escHtml(row[h] || '') + '</td>').join('') + '</tr>';
+    });
+    html += '</table></body></html>';
+    const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = s.name + '.xls';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+async function loadWelcome() {
+    const plainText = '您好！我是财报波动合理性检查智能助手';
+    await addMsgStreaming('bot', plainText, 1000);
 }
 
 function sendQuick(text) {
@@ -719,7 +959,7 @@ async function sendMessage() {
         sessionId = d.sessionId;
         document.getElementById('sessionInfo').textContent = `会话: ${sessionId.substring(0, 8)}...`;
         hideTyping();
-        addMsg('bot', d.reply);
+        await addMsgStreaming('bot', d.reply, 1000);
         if (d.workflowActive) {
             await startWorkflow();
         }
