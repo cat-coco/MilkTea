@@ -439,27 +439,8 @@ const ICON_PENDING = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none
 const ICON_DONE = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" fill="#22C55E"/><path d="M5 8l2 2 4-4" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 const ICON_SPINNER = '<span class="spinner"></span>';
 
-// 5 major steps, each with sub-tasks
-const STEPS = [
-    { id: 'step1', title: '第一步：获取EFM报表数据并计算波动值', subs: [
-        { id: 'step1', text: '读取系统报表数据并计算波动比例' }
-    ]},
-    { id: 'step2', title: '第二步：获取DCF010102明细数据', subs: [
-        { id: 'step2', text: '提取波动超20%报表项的明细数据' }
-    ]},
-    { id: 'step3', title: '第三步：数据处理与层级标注', subs: [
-        { id: 'step3_1', text: '3.1 获取股权信息并标注8大分层' },
-        { id: 'step3_2', text: '3.2 关联明细数据标注层级' },
-        { id: 'step3_3', text: '3.3 更新SR6数据的IC层级' },
-        { id: 'step3_4', text: '3.4 过滤并创建处理后数据' }
-    ]},
-    { id: 'step4', title: '第四步：校验明细数据合理性', subs: [
-        { id: 'step4', text: '明细数据与报表数据一致性校验' }
-    ]},
-    { id: 'step5', title: '第五步：按简化场景汇聚并分析波动', subs: [
-        { id: 'step5', text: '生成波动分析结论' }
-    ]}
-];
+// Steps are now dynamically received from the Agent's workflow plan via SSE
+// No hardcoded STEPS - the backend "main skill" provides the plan
 
 // Track state per step card
 let stepCardStates = {};
@@ -527,30 +508,7 @@ function toggleStepCard(stepId) {
     if (chev) chev.classList.toggle('collapsed', st.collapsed);
 }
 
-async function revealSubTasks(step) {
-    const subsEl = document.getElementById('subs-' + step.id);
-    const thinkEl = document.getElementById('think-' + step.id);
-    const thinkText = document.getElementById('think-text-' + step.id);
-    if (thinkEl) { thinkEl.style.display = ''; thinkText.textContent = '正在规划子任务...'; }
-    scrollChat();
-    for (let i = 0; i < step.subs.length; i++) {
-        await delay(800 + Math.random() * 400);
-        const sub = step.subs[i];
-        const wrap = document.createElement('div');
-        wrap.className = 'sub-task-wrap';
-        wrap.innerHTML = `
-            <div class="sub-task" id="sub-${sub.id}">
-                <div class="sub-task-icon" id="sicon-${sub.id}">${ICON_PENDING}</div>
-                <div class="sub-task-text">${esc(sub.text)}</div>
-                <div class="sub-task-status" id="sst-${sub.id}"></div>
-                <span class="sub-task-retry" id="retry-${sub.id}" onclick="event.stopPropagation();retryFromStep('${sub.id}')">重试</span>
-            </div>
-        `;
-        subsEl.appendChild(wrap);
-        scrollChat();
-    }
-    if (thinkEl) thinkEl.style.display = 'none';
-}
+// revealSubTasks is now handled inside createStepCardsProgressively
 
 function updateStepBadge(stepId, status) {
     const badge = document.getElementById('badge-' + stepId);
@@ -600,101 +558,198 @@ function hideStepThinking(stepId) {
     if (thinkEl) thinkEl.style.display = 'none';
 }
 
-// ==================== Workflow orchestration ====================
+// ==================== Agent-driven Workflow via SSE ====================
 async function startWorkflow() {
     if (workflowStarted) return;
     workflowStarted = true;
-    await executeWorkflowFromStep(0);
+    await executeAgentWorkflow();
 }
 
-async function executeWorkflowFromStep(startIdx) {
-    for (let i = startIdx; i < STEPS.length; i++) {
-        const step = STEPS[i];
+// 从后端SSE流接收Agent驱动的工作流事件
+async function executeAgentWorkflow() {
+    const response = await fetch(`${API}/api/finance/execute-workflow-stream`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId })
+    });
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let currentPlan = null; // Agent规划的步骤
 
-        // Snapshot sheet count before this major step (for rollback)
-        sheetSnapshotBeforeStep[step.id] = sheets.length;
+    while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
 
-        // 1. Create step card if not exists
-        if (!document.getElementById('sc-' + step.id)) {
-            await delay(600 + Math.random() * 400);
-            createStepCard(step, i);
-            scrollChat();
-        } else {
-            // Reset card for re-execution
-            resetStepCard(step);
-        }
+        let idx;
+        while ((idx = buffer.indexOf('\n\n')) !== -1) {
+            const chunk = buffer.substring(0, idx);
+            buffer = buffer.substring(idx + 2);
+            for (const line of chunk.split('\n')) {
+                if (!line.startsWith('data:')) continue;
+                let event;
+                try { event = JSON.parse(line.substring(5)); } catch (e) { continue; }
 
-        // 2. Activate and reveal sub-tasks
-        updateStepBadge(step.id, 'running');
-        await revealSubTasks(step);
+                switch (event.type) {
 
-        // 3. Execute all sub-tasks
-        let stepAborted = false;
-        for (const sub of step.subs) {
-            setSubTaskStatus(sub.id, 'running');
-            showStepThinking(step.id, '正在执行...');
-            scrollChat();
+                    case 'thinking':
+                        // Agent正在思考（规划、检查完成等）
+                        // 在最后一个step card的thinking区域显示，如果没有则在chat中短暂显示
+                        showAgentThinking(event.message);
+                        break;
 
-            await delay(1200 + Math.random() * 800);
+                    case 'plan':
+                        // Agent从主skill读取了任务规划，渐进式创建step cards
+                        currentPlan = event.steps;
+                        hideAgentThinking();
+                        await createStepCardsProgressively(currentPlan);
+                        break;
 
-            try {
-                const r = await fetch(`${API}/api/finance/execute-step`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ sessionId, stepId: sub.id })
-                });
-                const d = await r.json();
+                    case 'step_start':
+                        hideAgentThinking();
+                        // Snapshot sheet count for rollback
+                        sheetSnapshotBeforeStep[event.stepId] = sheets.length;
+                        updateStepBadge(event.stepId, 'running');
+                        scrollChat();
+                        break;
 
-                hideStepThinking(step.id);
-                setSubTaskStatus(sub.id, 'done');
+                    case 'sub_start':
+                        setSubTaskStatus(event.subId, 'running');
+                        showStepThinking(event.stepId, '正在连接...');
+                        scrollChat();
+                        break;
 
-                // Handle excel with loading
-                if (d.excelOperations) {
-                    for (const op of d.excelOperations) {
-                        if (op.action === 'addSheet') await addSheetWithLoading(op.sheetName, op.headers, op.rows);
-                        else if (op.action === 'updateSheet') {
-                            showExcelLoading('正在更新数据...');
-                            await delay(800);
-                            updateSheetDirect(op.sheetIndex, op.headers, op.rows, op.append);
-                            hideExcelLoading();
+                    case 'progress':
+                        showStepThinking(event.stepId, event.message);
+                        scrollChat();
+                        break;
+
+                    case 'excel':
+                        // Excel操作
+                        if (event.excelOperations) {
+                            for (const op of event.excelOperations) {
+                                if (op.action === 'addSheet') {
+                                    await addSheetWithLoading(op.sheetName, op.headers, op.rows);
+                                } else if (op.action === 'updateSheet') {
+                                    showExcelLoading('正在更新数据...');
+                                    await delay(800);
+                                    updateSheetDirect(op.sheetIndex, op.headers, op.rows, op.append);
+                                    hideExcelLoading();
+                                }
+                            }
                         }
-                    }
+                        break;
+
+                    case 'sub_complete':
+                        hideStepThinking(event.stepId);
+                        setSubTaskStatus(event.subId, 'done');
+                        // Update step progress
+                        if (currentPlan) {
+                            const stepDef = currentPlan.find(s => s.id === event.stepId);
+                            if (stepDef) {
+                                const doneSubs = stepDef.subs.filter(s => {
+                                    const el = document.getElementById('sub-' + s.id);
+                                    return el && el.classList.contains('done');
+                                }).length;
+                                const pct = Math.round((doneSubs / stepDef.subs.length) * 100);
+                                updateStepProgress(event.stepId, pct, doneSubs === stepDef.subs.length);
+                            }
+                        }
+                        scrollChat();
+                        break;
+
+                    case 'step_complete':
+                        hideAgentThinking();
+                        updateStepBadge(event.stepId, 'done');
+                        if (event.stepReply) showStepReply(event.stepId, event.stepReply);
+                        scrollChat();
+                        break;
+
+                    case 'confirm_needed':
+                        // 后端等待用户确认
+                        await showStep4Confirm();
+                        break;
+
+                    case 'confirm_resolved':
+                        // 确认已处理，继续
+                        break;
+
+                    case 'workflow_stopped':
+                        addMsg('bot', event.message || '工作流已停止。');
+                        break;
+
+                    case 'workflow_complete':
+                        hideAgentThinking();
+                        break;
+
+                    case 'error':
+                        addMsg('bot', event.message || '工作流执行出错。');
+                        break;
                 }
-
-                // Update progress
-                const doneSubs = step.subs.filter(s => {
-                    const el = document.getElementById('sub-' + s.id);
-                    return el && el.classList.contains('done');
-                }).length;
-                const pct = Math.round((doneSubs / step.subs.length) * 100);
-                updateStepProgress(step.id, pct, doneSubs === step.subs.length);
-
-                // If last sub, mark step done and show reply
-                if (sub.id === step.subs[step.subs.length - 1].id) {
-                    updateStepBadge(step.id, 'done');
-                    if (d.stepReply) showStepReply(step.id, d.stepReply);
-                }
-
-                scrollChat();
-            } catch {
-                hideStepThinking(step.id);
-                addMsg('bot', '工作流步骤执行出错，请重试。');
-                return;
-            }
-        }
-
-        // After step4: show confirmation dialog
-        if (step.id === 'step4') {
-            const proceed = await showStep4Confirm();
-            if (!proceed) {
-                addMsg('bot', '已停止执行，您可以在步骤中点击"重试"按钮重新执行。');
-                return;
             }
         }
     }
 }
 
-// Show step4 confirmation dialog
+// Agent思考动画 —— 在聊天区域底部显示
+let agentThinkingEl = null;
+function showAgentThinking(text) {
+    if (!agentThinkingEl) {
+        const c = document.getElementById('messages');
+        agentThinkingEl = document.createElement('div');
+        agentThinkingEl.className = 'step-thinking';
+        agentThinkingEl.id = 'agentThinking';
+        agentThinkingEl.innerHTML = '<div class="thinking-dots"><div class="td"></div><div class="td"></div><div class="td"></div></div><span id="agentThinkText"></span>';
+        c.appendChild(agentThinkingEl);
+    }
+    agentThinkingEl.style.display = '';
+    document.getElementById('agentThinkText').textContent = text || '正在思考...';
+    scrollChat();
+}
+
+function hideAgentThinking() {
+    if (agentThinkingEl) {
+        agentThinkingEl.style.display = 'none';
+    }
+}
+
+// 渐进式创建Step Cards（从Agent规划的任务列表）
+async function createStepCardsProgressively(planSteps) {
+    for (let i = 0; i < planSteps.length; i++) {
+        const step = planSteps[i];
+        await delay(600 + Math.random() * 400);
+        createStepCard(step, i);
+        scrollChat();
+
+        // 渐进式展示子任务
+        const subsEl = document.getElementById('subs-' + step.id);
+        const thinkEl = document.getElementById('think-' + step.id);
+        const thinkText = document.getElementById('think-text-' + step.id);
+        if (thinkEl) { thinkEl.style.display = ''; thinkText.textContent = '正在规划子任务...'; }
+        scrollChat();
+
+        for (let j = 0; j < step.subs.length; j++) {
+            await delay(400 + Math.random() * 300);
+            const sub = step.subs[j];
+            const wrap = document.createElement('div');
+            wrap.className = 'sub-task-wrap';
+            wrap.innerHTML = `
+                <div class="sub-task" id="sub-${sub.id}">
+                    <div class="sub-task-icon" id="sicon-${sub.id}">${ICON_PENDING}</div>
+                    <div class="sub-task-text">${esc(sub.text)}</div>
+                    <div class="sub-task-status" id="sst-${sub.id}"></div>
+                    <span class="sub-task-retry" id="retry-${sub.id}" onclick="event.stopPropagation();retryStep('${step.id}')">重试</span>
+                </div>
+            `;
+            subsEl.appendChild(wrap);
+            scrollChat();
+        }
+        if (thinkEl) thinkEl.style.display = 'none';
+    }
+}
+
+// Step4确认对话框 —— 向后端发送确认结果
 function showStep4Confirm() {
     return new Promise(resolve => {
         workflowResolve = resolve;
@@ -714,11 +769,19 @@ function showStep4Confirm() {
     });
 }
 
-function handleStep4Confirm(yes) {
+async function handleStep4Confirm(yes) {
     const card = document.getElementById('step4Confirm');
     if (card) {
         card.innerHTML = `<div class="confirm-text" style="color:#888">${yes ? '已选择：忽略差异，继续执行' : '已选择：不忽略差异，停止执行'}</div>`;
     }
+    // 向后端发送确认结果
+    try {
+        await fetch(`${API}/api/finance/workflow-confirm`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sessionId, confirmed: yes })
+        });
+    } catch (e) { /* ignore */ }
     if (workflowResolve) { workflowResolve(yes); workflowResolve = null; }
 }
 
@@ -733,40 +796,9 @@ function resetStepCard(step) {
     hideStepThinking(step.id);
 }
 
-// Retry from a specific sub-task's major step
-async function retryFromStep(subId) {
-    if (isLoading) return;
-    // Find major step index
-    let majorIdx = -1;
-    for (let i = 0; i < STEPS.length; i++) {
-        if (STEPS[i].subs.some(s => s.id === subId)) { majorIdx = i; break; }
-    }
-    if (majorIdx < 0) return;
-
-    // Rollback sheets: remove all sheets created from this step onward
-    const snapshot = sheetSnapshotBeforeStep[STEPS[majorIdx].id];
-    if (snapshot !== undefined && sheets.length > snapshot) {
-        sheets = sheets.slice(0, snapshot);
-        activeSheet = Math.max(0, sheets.length - 1);
-        renderTabs(); renderSheet();
-    }
-
-    // Remove step cards from this step onward
-    for (let i = majorIdx; i < STEPS.length; i++) {
-        const card = document.getElementById('sc-' + STEPS[i].id);
-        if (card) card.remove();
-        delete stepCardStates[STEPS[i].id];
-    }
-
-    // Remove any confirm card
-    const confirmCard = document.getElementById('step4Confirm');
-    if (confirmCard) confirmCard.remove();
-
-    isLoading = true;
-    document.getElementById('sendBtn').disabled = true;
-    await executeWorkflowFromStep(majorIdx);
-    isLoading = false;
-    document.getElementById('sendBtn').disabled = false;
+// Retry: re-trigger workflow (simplified - clears and restarts)
+async function retryStep(stepId) {
+    addMsg('bot', '请重新发起分析流程以重试。');
 }
 
 // ==================== Excel ====================
@@ -979,6 +1011,7 @@ async function clearChat() {
     document.getElementById('messages').innerHTML = '';
     workflowStarted = false;
     stepCardStates = {};
+    agentThinkingEl = null;
     sheets = []; activeSheet = 0;
     renderSheet(); document.getElementById('excelTabBar').innerHTML = '';
     loadWelcome();

@@ -112,7 +112,8 @@ public class FinanceAgentConfig {
                         "mark-ic-level", List.of(financeTools),
                         "filter-detail-data", List.of(financeTools),
                         "check-detail-data", List.of(financeTools),
-                        "generate-report", List.of(financeTools)
+                        "generate-report", List.of(financeTools),
+                        "workflow-plan", List.of(financeTools)
                 ))
                 .build();
     }
